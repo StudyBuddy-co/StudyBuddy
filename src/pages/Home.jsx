@@ -1,12 +1,11 @@
-import { Footer } from "../components/Footer";
-import { Header } from "../components/Header";
+
 import { ServicesSection } from "../components/ServiceSection";
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 
-export function Home() {
+export default function Home() {
   return (
     <div>
-<Header></Header>
+
     <section className="bg-gradient-to-br from-stone-50 via-teal-50 to-cyan-50 py-16 px-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
@@ -57,7 +56,6 @@ export function Home() {
       </div>
     </section>
 <ServicesSection></ServicesSection>
-<Footer></Footer>
     </div>
   );
 }
