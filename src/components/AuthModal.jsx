@@ -5,6 +5,7 @@ import {
 } from "firebase/auth"
 import { doc, setDoc, serverTimestamp } from "firebase/firestore"
 import { auth, db } from "../services/Firebase"
+import { updateProfile } from "firebase/auth"
 
 export default function AuthModal({ open, onClose, mode, setMode }) {
   // 🔹 STATE (ALL hooks at top)
@@ -54,6 +55,10 @@ export default function AuthModal({ open, onClose, mode, setMode }) {
           email,
           password
         )
+
+        await updateProfile(userCredential.user, {
+          displayName: `${firstName} ${lastName}`,
+        })
 
         // 2️⃣ Save profile to Firestore
         await setDoc(doc(db, "users", userCredential.user.uid), {

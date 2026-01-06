@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { NavLink } from "react-router-dom"
 import { signOut } from "firebase/auth"
 
@@ -13,6 +13,9 @@ export function Header() {
   const [darkMode, setDarkMode] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
   const [authMode, setAuthMode] = useState("signin")
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  const menuRef = useRef(null)
 
   useEffect(() => {
     const root = document.documentElement
@@ -21,7 +24,19 @@ export function Header() {
       : root.classList.remove("dark")
   }, [darkMode])
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
   async function handleSignOut() {
+    setMenuOpen(false)
     await signOut(auth)
   }
 
@@ -32,13 +47,7 @@ export function Header() {
 
   return (
     <>
-      <header
-        className="
-          w-full px-6 py-4 shadow-lg
-          bg-gradient-to-r from-teal-400 via-cyan-400 to-sky-400
-          dark:bg-gradient-to-r dark:from-slate-900 dark:via-slate-800 dark:to-slate-900
-        "
-      >
+      <header className="w-full px-6 py-4 shadow-lg bg-gradient-to-r from-teal-400 via-cyan-400 to-sky-400 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
 
           {/* LEFT */}
@@ -52,15 +61,9 @@ export function Header() {
 
             {!isAuthenticated && (
               <nav className="hidden md:flex space-x-6">
-                <NavLink to="/" end className={navClass}>
-                  Home
-                </NavLink>
-                <NavLink to="/about" className={navClass}>
-                  About
-                </NavLink>
-                <NavLink to="/contact" className={navClass}>
-                  Contact
-                </NavLink>
+                <NavLink to="/" end className={navClass}>Home</NavLink>
+                <NavLink to="/about" className={navClass}>About</NavLink>
+                <NavLink to="/contact" className={navClass}>Contact</NavLink>
               </nav>
             )}
           </div>
@@ -68,11 +71,10 @@ export function Header() {
           {/* RIGHT */}
           <div className="flex items-center space-x-4">
 
-            {/* Dark Mode */}
+            {/* Dark mode */}
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="text-2xl text-white hover:scale-110 transition"
-              aria-label="Toggle theme"
             >
               {darkMode ? "🌞" : "🌙"}
             </button>
@@ -100,18 +102,55 @@ export function Header() {
                 </button>
               </>
             ) : (
-              <button
-                onClick={handleSignOut}
-                className="text-white hover:text-yellow-200 transition"
-              >
-                Sign Out
-              </button>
+              <div className="relative" ref={menuRef}>
+                {/* Avatar + Name */}
+                <button
+                  onClick={() => setMenuOpen(!menuOpen)}
+                  className="flex items-center gap-2 text-white hover:text-yellow-200 transition"
+                >
+                  <img
+                    src={user.photoURL || "/default-avatar.png"}
+                    alt="User avatar"
+                    className="w-8 h-8 rounded-full object-cover border border-white"
+                  />
+                  <span className="font-medium">
+                    {user.displayName || "Account"}
+                  </span>
+                </button>
+
+                {/* Dropdown */}
+                {menuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg overflow-hidden z-50">
+                    <NavLink
+                      to="/profile"
+                      className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Profile
+                    </NavLink>
+
+                    <NavLink
+                      to="/settings"
+                      className="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Settings
+                    </NavLink>
+
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    >
+                      Log Out
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
       </header>
 
-      {/* AUTH MODAL */}
       <AuthModal
         open={authOpen}
         onClose={() => setAuthOpen(false)}
