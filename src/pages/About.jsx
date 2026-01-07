@@ -1,5 +1,6 @@
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import FounderHeadshot from '../figma/Mumtaz-Sheikhaden-Professional-Headshot.jpg';
+import linkedinIcon from '../figma/linkedin.svg';
 
 export default function AboutPage() {
   return (
@@ -115,7 +116,7 @@ export default function AboutPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="flex justify-center flex-wrap gap-x-8 gap-y-12">
             {[
               {
                 name: "Mumtaz Sheikhaden",
@@ -138,7 +139,7 @@ export default function AboutPage() {
                 bio: "Connecting students and fostering learning communities"
               }*/
             ].map((member, index) => (
-              <div key={index} className="text-center group">
+              <div key={index} className="w-64 text-center group">
                 <div className="relative mb-6 mx-auto w-32 h-32">
                   <div className="absolute -inset-2 bg-gradient-to-r from-teal-400 to-cyan-400 rounded-full opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
                   <ImageWithFallback
@@ -151,15 +152,16 @@ export default function AboutPage() {
                 <p className="text-teal-600 font-medium mb-3">{member.role}</p>
                 <p className="text-gray-600 text-sm">{member.bio}</p>
                 <p className="text-gray-600 text-sm">{member.sources}</p>
-<p className="text-gray-600 text-sm hover:bg-blue-100 hover:underline">
-  <a
-    href={member.socials.linkedin}
-    target="_blank"
-    rel="noopener noreferrer"
-  >
-    LinkedIn
-  </a>
-</p>
+                <div className="flex justify-center mt-1">
+                  <a
+                    href={member.socials.linkedin}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:scale-110 transition-transform"
+                  >
+                    <img src={linkedinIcon} alt="LinkedIn" className="w-8 h-8" />
+                  </a>
+                </div>
               </div>
             ))}
           </div>

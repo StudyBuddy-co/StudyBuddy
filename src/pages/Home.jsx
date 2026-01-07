@@ -2,7 +2,7 @@
 import { ServicesSection } from "../components/ServiceSection";
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 
-export default function Home() {
+export default function Home({ openSignup }) {
   return (
     <div>
 
@@ -55,7 +55,7 @@ export default function Home() {
         </div>
       </div>
     </section>
-<ServicesSection></ServicesSection>
+    <ServicesSection openSignup={openSignup} />
     </div>
   );
 }
