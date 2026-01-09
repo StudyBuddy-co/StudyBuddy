@@ -10,11 +10,12 @@ import AuthModal from "./components/AuthModal";
 import Home from "./pages/Home"
 import AboutPage from "./pages/About"
 import ContactPage from "./pages/Contact"
-/*import Dashboard from "./pages/Dashboard"*/
+import Dashboard from "./pages/Dashboard"
+import Profile from "./pages/Profile"
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth()
-  return user ? children : <Navigate to="/" />
+  return user ? children : <Navigate to="/" replace />
 }
 
 function App() {
@@ -47,14 +48,24 @@ function openSignup() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/contact" element={<ContactPage />} />
 
-          {/*<Route
+          <Route
             path="/dashboard"
             element={
               <ProtectedRoute>
                 <Dashboard />
               </ProtectedRoute>
             }
-          />*/}
+          />
+
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+
         </Routes>
 
         <Footer />

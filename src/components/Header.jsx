@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from "react"
 import { NavLink } from "react-router-dom"
-import { signOut } from "firebase/auth"
+import { supabase } from "../services/supabaseClient"
 
 import AuthModal from "./AuthModal"
-import { useAuth } from "../auth/authContext"
-import { auth } from "../services/Firebase"
+import { useAuth } from "../auth/useAuth"
 
 export function Header() {
   const { user } = useAuth()
@@ -35,10 +34,10 @@ export function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  async function handleSignOut() {
-    setMenuOpen(false)
-    await signOut(auth)
-  }
+    async function handleSignOut() {
+      setMenuOpen(false)
+      await supabase.auth.signOut()
+    }
 
   const navClass = ({ isActive }) =>
     `text-white font-medium transition-colors duration-200
@@ -114,7 +113,9 @@ export function Header() {
                     className="w-8 h-8 rounded-full object-cover border border-white"
                   />
                   <span className="font-medium">
-                    {user.displayName || "Account"}
+                    {user.user_metadata?.firstName
+                      ? `${user.user_metadata.firstName} ${user.user_metadata.lastName}`
+                      : "Account"}
                   </span>
                 </button>
 
