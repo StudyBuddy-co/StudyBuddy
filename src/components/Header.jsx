@@ -13,6 +13,10 @@ export function Header() {
   const [authOpen, setAuthOpen] = useState(false)
   const [authMode, setAuthMode] = useState("signin")
   const [menuOpen, setMenuOpen] = useState(false)
+const [userProfile, setUserProfile] = useState({
+  name: "",
+  avatar_url: "/default-avatar.png",
+});
 
   const menuRef = useRef(null)
 
@@ -22,6 +26,39 @@ export function Header() {
       ? root.classList.add("dark")
       : root.classList.remove("dark")
   }, [darkMode])
+
+  useEffect(() => {
+  if (!user) return;
+
+  const fetchProfile = async () => {
+    const { data, error } = await supabase
+      .from("profile")
+      .select("name, avatar_url")
+      .eq("id", user.id)
+      .single();
+
+    if (error) {
+      console.error("Failed to fetch profile:", error);
+      return;
+    }
+
+    setUserProfile({
+      name: data?.name || user.user_metadata?.firstName || "Account",
+      avatar_url: data?.avatar_url || "/default-avatar.png",
+    });
+  };
+
+  fetchProfile();
+}, [user]);
+
+useEffect(() => {
+  const handler = (e) => setUserProfile({
+    name: e.detail.name,
+    avatar_url: e.detail.avatar_url
+  });
+  window.addEventListener("profile-updated", handler);
+  return () => window.removeEventListener("profile-updated", handler);
+}, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -117,14 +154,12 @@ export function Header() {
                   className="flex items-center gap-2 text-white hover:text-yellow-200 transition"
                 >
                   <img
-                    src={user.photoURL || "/default-avatar.png"}
+                    src={userProfile.avatar_url || "/default-avatar.png"}
                     alt="User avatar"
                     className="w-8 h-8 rounded-full object-cover border border-white"
                   />
                   <span className="font-medium">
-                    {user.user_metadata?.firstName
-                      ? `${user.user_metadata.firstName} ${user.user_metadata.lastName}`
-                      : "Account"}
+                    {userProfile.name || "Account"}
                   </span>
                 </button>
 

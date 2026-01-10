@@ -5,7 +5,7 @@ import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { Textarea } from '../components/textarea';
 import { Badge } from '../components/Badge';
-/*import { Avatar, AvatarFallback, AvatarImage } from '../components/Avatar';*/
+import { useNavigate } from 'react-router-dom';
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
@@ -19,14 +19,24 @@ export default function ProfilePage() {
     year: '',
     location: '',
     classesTaken: [],
-    strength: [],
+    strengths: [],
     areasOfDevelopment: [],
-    /*avatar: ''*/
+    avatar_url: ''
   });
 
   const [newClass, setNewClass] = useState('');
   const [newStrength, setNewStrength] = useState('');
   const [newArea, setNewArea] = useState('');
+  const [newTagText, setNewTagText] = useState('');
+  const [newTagColor, setNewTagColor] = useState('bg-teal-500');
+  const navigate = useNavigate();
+
+const mainTags = [
+  { key: 'year', defaultColor: 'bg-teal-500' },
+  { key: 'major', defaultColor: 'bg-cyan-500' },
+  { key: 'school', defaultColor: 'bg-purple-500' },
+  { key: 'location', defaultColor: 'bg-stone-500' }
+];
 
   // Fetch user profile on load
   useEffect(() => {
@@ -56,7 +66,7 @@ export default function ProfilePage() {
           classesTaken: data.classesTaken || [],
           strengths: data.areasOfStrength || [],
           areasOfDevelopment: data.areasOfDevelopment || [],
-          /*avatar: data.avatar || '' --- IGNORE ---*/
+          avatar_url: data.avatar_url || ''
         });
       }
       setLoading(false);
@@ -64,6 +74,31 @@ export default function ProfilePage() {
 
     fetchProfile();
   }, []);
+
+      const handleAvatarUpload = async (file) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user.id}/avatar.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) {
+        console.error(uploadError);
+        return;
+      }
+
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const updatedProfile = { ...profile, avatar_url: data.publicUrl };
+      setProfile(updatedProfile);
+      window.dispatchEvent(new CustomEvent("profile-updated", { detail: updatedProfile }));
+    };
 
   const saveProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -78,9 +113,9 @@ export default function ProfilePage() {
       year: profile.year,
       location: profile.location,
       classesTaken: profile.classesTaken,
-      areasOfStrength: profile.strengths,
+      areasOfStrength: profile.strengths, // note the different key name in the database, strengths -> areasOfStrength
       areasOfDevelopment: profile.areasOfDevelopment,
-      /*avatar: profile.avatar*/
+      avatar_url: profile.avatar_url
     };
 
     const { error } = await supabase
@@ -88,6 +123,9 @@ export default function ProfilePage() {
       .upsert(updates);
 
     if (error) console.error(error);
+    else {
+      window.dispatchEvent(new CustomEvent("profile-updated", { detail: profile }));
+    }
     setIsEditing(false);
   };
 
@@ -106,46 +144,130 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-stone-50 to-teal-50 p-6">
       <div className="max-w-5xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-4">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
+            My Profile 👤
+          </h1>
+          <p className="text-lg text-gray-600">
+            Manage your account, skills, and learning resources
+          </p>
+        </div>
         {/* Profile Card */}
-        <Card className="shadow-lg border-stone-200">
-          <CardContent className="flex flex-col sm:flex-row items-center sm:justify-between gap-6">
-            <div className="flex items-center gap-4 w-full sm:w-auto">
-              {/*<Avatar className="w-20 h-20">
-                {profile.avatar ? <AvatarImage src={profile.avatar} alt={profile.name} /> : <AvatarFallback className="bg-teal-200 text-teal-800 text-2xl font-bold">{profile.name?.charAt(0)}</AvatarFallback>}
-              </Avatar>*/}
-              <div className="flex-1 min-w-0">
-                <Input
-                  value={profile.name}
-                  onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                  disabled={!isEditing}
-                  className="text-gray-900 font-semibold text-lg w-full"
-                  placeholder="Your name"
-                />
-                <Input
-                  value={profile.email}
-                  disabled
-                  className="mt-1 text-gray-600 w-full"
-                />
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {profile.year && <Badge className="bg-teal-100 text-teal-800">{profile.year}</Badge>}
-                  {profile.major && <Badge className="bg-cyan-100 text-cyan-800">{profile.major}</Badge>}
-                  {profile.school && <Badge className="bg-purple-100 text-purple-800">{profile.school}</Badge>}
-                  {profile.location && <Badge className="bg-stone-100 text-stone-800">{profile.location}</Badge>}
-                </div>
-              </div>
-            </div>
+{/* Profile Card */}
+<Card className="shadow-lg border-stone-200">
+  <CardContent className="pt-6">
+    <div className="flex items-center space-x-6">
+      {/* Avatar with Upload */}
+      <div className="flex flex-col items-center gap-2">
+        <img
+          src={profile.avatar_url || "/default-avatar.png"}
+          alt={profile.name}
+          className="w-24 h-24 rounded-full object-cover border"
+        />
+        {isEditing && (
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => handleAvatarUpload(e.target.files[0])}
+            className="text-sm"
+          />
+        )}
+      </div>
 
-            <Button
-              onClick={() => {
-                if (isEditing) saveProfile();
-                else setIsEditing(true);
-              }}
-              className={isEditing ? "border-gray-300" : "bg-gradient-to-r from-teal-500 to-cyan-500 text-white"}
-            >
-              {isEditing ? "Save Profile" : "Edit Profile"}
-            </Button>
-          </CardContent>
-        </Card>
+      {/* Name, Email, Tags */}
+      <div className="flex-1 min-w-0">
+        <Input
+          value={profile.name}
+          onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+          disabled={!isEditing}
+          className="text-gray-900 font-semibold text-2xl w-full"
+          placeholder="Your name"
+        />
+        <Input
+          value={profile.email}
+          disabled
+          className="mt-1 text-gray-600 w-full"
+        />
+
+        {/* Tags: Year, Major, School, Location */}
+        {/* Tags: Year, Major, School, Location */}
+<div className="flex flex-wrap gap-2 mt-2">
+  {mainTags.map(tag => {
+    const value = profile[tag.key];
+    return value ? (
+      <Badge
+        key={tag.key}
+        className={`px-3 py-1 font-bold text-white ${profile[`${tag.key}_color`] || tag.defaultColor}`}
+      >
+        {value}
+        {isEditing && (
+          <button
+            onClick={() => setProfile({ ...profile, [tag.key]: '', [`${tag.key}_color`]: '' })}
+            className="ml-1 text-white font-bold"
+          >
+            ×
+          </button>
+        )}
+      </Badge>
+    ) : null;
+  })}
+</div>
+
+{/* Add new tag input when editing */}
+{isEditing && (
+  <div className="flex gap-2 mt-2 flex-wrap">
+    <Input
+      value={newTagText}
+      onChange={(e) => setNewTagText(e.target.value)}
+      placeholder="Add a tag..."
+      className="flex-1"
+    />
+    <select
+      value={newTagColor}
+      onChange={(e) => setNewTagColor(e.target.value)}
+      className="border px-2 rounded"
+    >
+      <option value="bg-teal-500">Teal</option>
+      <option value="bg-cyan-500">Cyan</option>
+      <option value="bg-purple-500">Purple</option>
+      <option value="bg-stone-500">Stone</option>
+    </select>
+    <Button
+      onClick={() => {
+        if (!newTagText.trim()) return;
+
+        // Decide which main tag is empty first
+        const emptyTag = mainTags.find(tag => !profile[tag.key]);
+        if (emptyTag) {
+          setProfile({
+            ...profile,
+            [emptyTag.key]: newTagText.trim(),
+            [`${emptyTag.key}_color`]: newTagColor
+          });
+          setNewTagText('');
+        }
+      }}
+    >
+      Add
+    </Button>
+  </div>
+)}
+      </div>
+
+      {/* Edit / Save Button */}
+      <Button
+        onClick={() => {
+          if (isEditing) saveProfile();
+          else setIsEditing(true);
+        }}
+        className={isEditing ? "border-gray-300" : "bg-gradient-to-r from-teal-500 to-cyan-500 text-white"}
+      >
+        {isEditing ? "Save Profile" : "Edit Profile"}
+      </Button>
+    </div>
+  </CardContent>
+</Card>
 
         {/* Bio */}
         <Card className="shadow-lg border-stone-200">
@@ -222,6 +344,29 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
         ))}
+        {profile.classesTaken.length > 0 &&
+          profile.strengths.length > 0 &&
+          profile.areasOfDevelopment.length > 0 && (
+            <Card className="border-purple-200 shadow-lg bg-gradient-to-r from-purple-50 to-pink-50">
+              <CardContent className="pt-6">
+                <div className="flex items-start space-x-4">
+                  <div className="text-3xl">🤝</div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-purple-900 mb-2">Smart Peer Matching</h3>
+                    <p className="text-purple-800 text-sm">
+                      You'll be paired with peer tutors based on complementary skills. For example, if you're strong in <span className="font-semibold">{profile.strengths[0]}</span> and need help in <span className="font-semibold">{profile.areasOfDevelopment[0]}</span>, we'll match you with students who excel in {profile.areasOfDevelopment[0]} and need support in {profile.strengths[0]}.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => navigate('findtutors')}
+                    className="bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                  >
+                    View Matches
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
       </div>
     </div>
   );
