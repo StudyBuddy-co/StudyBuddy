@@ -52,19 +52,28 @@ export function Header() {
           {/* LEFT */}
           <div className="flex items-center space-x-8">
             <NavLink
-              to="/"
+              to={isAuthenticated ? "/dashboard" : "/"}
               className="text-white text-2xl font-bold hover:text-yellow-200 transition"
             >
               StudyBuddy 🎓
             </NavLink>
 
-            {!isAuthenticated && (
-              <nav className="hidden md:flex space-x-6">
-                <NavLink to="/" end className={navClass}>Home</NavLink>
-                <NavLink to="/about" className={navClass}>About</NavLink>
-                <NavLink to="/contact" className={navClass}>Contact</NavLink>
-              </nav>
-            )}
+<nav className="hidden md:flex space-x-6">
+  {isAuthenticated ? (
+    <>
+      <NavLink to="/dashboard" className={navClass}>Dashboard</NavLink>
+      <NavLink to="/find-tutor" className={navClass}>Find Tutor</NavLink>
+      <NavLink to="/messaging" className={navClass}>Messaging</NavLink>
+      <NavLink to="/contact" className={navClass}>Contact</NavLink>
+    </>
+  ) : (
+    <>
+      <NavLink to="/" end className={navClass}>Home</NavLink>
+      <NavLink to="/about" className={navClass}>About</NavLink>
+      <NavLink to="/contact" className={navClass}>Contact</NavLink>
+    </>
+  )}
+</nav>
           </div>
 
           {/* RIGHT */}

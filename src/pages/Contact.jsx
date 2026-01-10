@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "../services/Firebase";
+/*import { collection, addDoc, serverTimestamp } from "firebase/firestore";*/
+/*import { db } from "../services/Firebase";*/
 import { useAuth } from "../auth/useAuth";
 
 export default function ContactPage() {
