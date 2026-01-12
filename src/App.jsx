@@ -12,6 +12,7 @@ import AboutPage from "./pages/About"
 import ContactPage from "./pages/Contact"
 import Dashboard from "./pages/Dashboard"
 import Profile from "./pages/Profile"
+import FindTutor from "./pages/FindTutor"
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth()
@@ -62,6 +63,15 @@ function openSignup() {
             element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/findtutor"
+            element={
+              <ProtectedRoute>
+                <FindTutor />
               </ProtectedRoute>
             }
           />

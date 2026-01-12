@@ -6,17 +6,13 @@ import AuthModal from "./AuthModal"
 import { useAuth } from "../auth/useAuth"
 
 export function Header() {
-  const { user } = useAuth()
+  const { user, userProfile } = useAuth()
   const isAuthenticated = !!user
 
   const [darkMode, setDarkMode] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
   const [authMode, setAuthMode] = useState("signin")
   const [menuOpen, setMenuOpen] = useState(false)
-const [userProfile, setUserProfile] = useState({
-  name: "",
-  avatar_url: "/default-avatar.png",
-});
 
   const menuRef = useRef(null)
 
@@ -26,39 +22,6 @@ const [userProfile, setUserProfile] = useState({
       ? root.classList.add("dark")
       : root.classList.remove("dark")
   }, [darkMode])
-
-  useEffect(() => {
-  if (!user) return;
-
-  const fetchProfile = async () => {
-    const { data, error } = await supabase
-      .from("profile")
-      .select("name, avatar_url")
-      .eq("id", user.id)
-      .single();
-
-    if (error) {
-      console.error("Failed to fetch profile:", error);
-      return;
-    }
-
-    setUserProfile({
-      name: data?.name || user.user_metadata?.firstName || "Account",
-      avatar_url: data?.avatar_url || "/default-avatar.png",
-    });
-  };
-
-  fetchProfile();
-}, [user]);
-
-useEffect(() => {
-  const handler = (e) => setUserProfile({
-    name: e.detail.name,
-    avatar_url: e.detail.avatar_url
-  });
-  window.addEventListener("profile-updated", handler);
-  return () => window.removeEventListener("profile-updated", handler);
-}, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -99,7 +62,7 @@ useEffect(() => {
   {isAuthenticated ? (
     <>
       <NavLink to="/dashboard" className={navClass}>Dashboard</NavLink>
-      <NavLink to="/find-tutor" className={navClass}>Find Tutor</NavLink>
+      <NavLink to="/findtutor" className={navClass}>Find Tutor</NavLink>
       <NavLink to="/messaging" className={navClass}>Messaging</NavLink>
       <NavLink to="/contact" className={navClass}>Contact</NavLink>
     </>

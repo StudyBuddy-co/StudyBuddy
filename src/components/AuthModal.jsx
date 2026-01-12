@@ -32,16 +32,26 @@ const navigate = useNavigate();
         });
         if (signUpError) throw signUpError;
 
-        // 2️⃣ Insert profile into Supabase
-        await supabase.from("profile").insert([
-          {
-            id: signUpData.user.id,
-            email: signUpData.user.email,
-            firstName,
-            lastName,
-            createdAt: new Date().toISOString(),
-          },
-        ]);
+        // 2️⃣ Create or update profile in Supabase (use snake_case column names)
+        const displayName = [firstName, lastName].filter(Boolean).join(" ") || "Student";
+
+        const { error: profileError } = await supabase
+          .from("profile")
+          .upsert(
+            [
+              {
+                id: signUpData.user.id,
+                email: signUpData.user.email,
+                name: displayName,
+                avatar_url: "/default-avatar.png",
+              },
+            ],
+            { onConflict: "id" }
+          )
+          .select()
+          .maybeSingle();
+
+        if (profileError) throw profileError;
 
         // 3️⃣ Immediately sign in the user
         const { error: signInError } = await supabase.auth.signInWithPassword({

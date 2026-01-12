@@ -6,6 +6,7 @@ import { Button } from '../components/Button';
 import { Textarea } from '../components/textarea';
 import { Badge } from '../components/Badge';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/useAuth'
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
@@ -30,6 +31,7 @@ export default function ProfilePage() {
   const [newTagText, setNewTagText] = useState('');
   const [newTagColor, setNewTagColor] = useState('bg-teal-500');
   const navigate = useNavigate();
+  const { setUserProfile } = useAuth()
 
 const mainTags = [
   { key: 'year', defaultColor: 'bg-teal-500' },
@@ -51,7 +53,7 @@ const mainTags = [
         .from('profile')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') console.error(error); // ignore not found
       if (data) {
@@ -122,10 +124,16 @@ const mainTags = [
       .from('profile')
       .upsert(updates);
 
-    if (error) console.error(error);
-    else {
-      window.dispatchEvent(new CustomEvent("profile-updated", { detail: profile }));
-    }
+    if (!error) {
+    // Update global context immediately
+    setUserProfile({
+      name: profile.name,
+      avatar_url: profile.avatar_url
+    })
+
+    // Optional: fire event for other listeners (like Header)
+    window.dispatchEvent(new CustomEvent("profile-updated", { detail: { name: profile.name, avatar_url: profile.avatar_url }}))
+  } else console.error(error);
     setIsEditing(false);
   };
 

@@ -1,16 +1,16 @@
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../auth/useAuth"
-
+import { useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "../components/Card"
 import { Progress } from "../components/Progress"
 import { ImageWithFallback } from "../figma/ImageWithFallback"
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { userProfile, setUserProfile } = useAuth()
 
   const quickActions = [
-    { title: "Find Tutors", icon: "🔍", path: "/tutor-connect", description: "Connect with expert tutors" },
+    { title: "Find Tutors", icon: "🔍", path: "/findtutor", description: "Connect with expert tutors" },
     { title: "Messages", icon: "💬", path: "/messages", description: "Chat with your tutors" },
     { title: "Resources", icon: "📚", path: "/resources", description: "Access study materials" },
     { title: "AI Assistant", icon: "🤖", path: "/ai-assistant", description: "Get AI-powered help" },
@@ -24,6 +24,12 @@ export default function Dashboard() {
     { subject: "Literature", tutor: "Sarah Davis", time: "Wed, 2:30 PM", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80" },
   ]
 
+  useEffect(() => {
+  const handler = (e) => setUserProfile(e.detail)
+  window.addEventListener('profile-updated', handler)
+  return () => window.removeEventListener('profile-updated', handler)
+}, [setUserProfile])
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-stone-50 to-teal-50 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -31,7 +37,9 @@ export default function Dashboard() {
         {/* Welcome */}
         <div className="bg-gradient-to-r from-teal-500 to-cyan-500 rounded-3xl p-8 text-white flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">Welcome back, {user?.displayName?.split(" ")[0] || "Student"}! 👋</h1>
+            <h1 className="text-3xl font-bold">
+              Welcome back, {(userProfile?.name || "Student").split(" ")[0]}! 👋
+            </h1>
             <p className="text-teal-100 mt-2">Ready to continue your learning journey?</p>
           </div>
           <div className="hidden md:block text-6xl opacity-20">🎓</div>
