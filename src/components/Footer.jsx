@@ -1,6 +1,6 @@
 export function Footer() {
   return (
-    <footer className="bg-gradient-to-r from-teal-400 via-cyan-400 to-sky-400 text-white py-12 px-6">
+    <footer className="bg-gradient-to-r from-teal-400 via-cyan-400 to-sky-400 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-white dark:text-gray-200 py-12 px-6">
       <div className="max-w-7xl mx-auto text-center space-y-4">
         <div className="flex justify-center items-center space-x-2">
           <span className="text-2xl">🎓</span>

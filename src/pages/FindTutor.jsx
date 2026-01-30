@@ -33,34 +33,42 @@ export default function TutorConnectPage({ onNavigate, tutors }) {
   // MATCHING ALGORITHM
   // -------------------------------
   const calculateMatchScore = (user, tutor) => {
-    if (!user) return 0;
+  if (!user) return 0;
 
-    const userStrengths = user.strengths || [];
-    const userNeeds = user.needsHelp || [];
+  const userStrengths = user.areasOfStrength || [];
+  const userNeeds = user.areasOfDevelopment || [];
 
-    const tutorStrengths = tutor.strengths || [];
-    const tutorNeeds = tutor.needsHelp || [];
+  const tutorStrengths = tutor.areasOfStrength || [];
+  const tutorNeeds = tutor.areasOfDevelopment || [];
 
-    // Tutor helps user
-    const tutorHelpsUser = tutorStrengths.filter(s =>
-      userNeeds.includes(s)
-    ).length;
+  // Tutor helps user
+  const tutorHelpsUser = tutorStrengths.filter(s =>
+    userNeeds.includes(s)
+  ).length;
 
-    // User helps tutor
-    const userHelpsTutor = tutorNeeds.filter(n =>
-      userStrengths.includes(n)
-    ).length;
+  // User helps tutor
+  const userHelpsTutor = tutorNeeds.filter(n =>
+    userStrengths.includes(n)
+  ).length;
 
-    const totalPossible =
-      userNeeds.length + userStrengths.length;
+  // No mutual value → no match
+  if (tutorHelpsUser === 0 && userHelpsTutor === 0) {
+    return 0;
+  }
 
-    if (totalPossible === 0) return 0;
+  const tutorHelpScore =
+    tutorHelpsUser / Math.max(userNeeds.length, 1);
 
-    const rawScore =
-      ((tutorHelpsUser + userHelpsTutor) / totalPossible) * 100;
+  const userHelpScore =
+    userHelpsTutor / Math.max(tutorNeeds.length, 1);
 
-    return Math.min(100, Math.round(rawScore));
-  };
+  // Weight helping YOU higher than helping THEM
+  const weightedScore =
+    tutorHelpScore * 0.65 +
+    userHelpScore * 0.35;
+
+  return Math.round(weightedScore * 100);
+};
 
     // -------------------------------
   // FETCH DATA FROM SUPABASE
@@ -106,23 +114,45 @@ export default function TutorConnectPage({ onNavigate, tutors }) {
     ? computedTutors
     : tutors;
 
+
   // Filter tutors based on search + selected filter
-  const filteredTutors = (tutorsWithScores || [])
-    .filter((tutor) => {
-      const matchesSearch =
-        tutor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tutor.strengths?.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        tutor.needsHelp?.some((n) => n.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        tutor.major?.toLowerCase().includes(searchQuery.toLowerCase());
+    let results = (tutorsWithScores || []).filter((tutor) => {
+    const matchesSearch =
+      (tutor.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tutor.areasOfStrength?.some(s =>
+        s.toLowerCase().includes(searchQuery.toLowerCase())
+      ) ||
+      tutor.areasOfDevelopment?.some(n =>
+        n.toLowerCase().includes(searchQuery.toLowerCase())
+      ) ||
+      tutor.major?.toLowerCase().includes(searchQuery.toLowerCase());
 
-      let matchesFilter = true;
-      if (selectedFilter === "High Match (80%+)") matchesFilter = tutor.matchScore >= 80;
-      else if (selectedFilter === "Online Now") matchesFilter = tutor.online;
-      else if (selectedFilter === "Most Experienced") matchesFilter = tutor.studySessions >= 30;
+    if (!matchesSearch) return false;
 
-      return matchesSearch && matchesFilter;
-    })
-    .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+    if (selectedFilter === "High Match (80%+)") {
+      return tutor.matchScore >= 80;
+    }
+
+    if (selectedFilter === "Online Now") {
+      return tutor.online;
+    }
+
+    return true;
+    });
+
+    // Exact matches always float to the top
+    results.sort((a, b) =>
+    (b.matchScore >= 90) - (a.matchScore >= 90)
+    );
+
+    // Sorting logic
+    if (selectedFilter === "Most Experienced") {
+    results.sort((a, b) => (b.studySessions || 0) - (a.studySessions || 0));
+    } else {
+    results.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+    }
+
+    const filteredTutors = results;
 
   if (isLoading) {
     return (
@@ -165,7 +195,7 @@ export default function TutorConnectPage({ onNavigate, tutors }) {
               <h3 className="font-semibold text-purple-900 mb-2">How Peer Matching Works</h3>
               <p className="text-purple-800 text-sm">
                 {currentUser
-                  ? `You're strong in ${currentUser.strengths?.join(", ")} and need help with ${currentUser.needsHelp?.join(", ")}. We'll match you with students who complement your skills for a mutually beneficial partnership!`
+                  ? `You're strong in ${currentUser.areasOfStrength?.join(", ")} and need help with ${currentUser.areasOfDevelopment?.join(", ")}. We'll match you with students who complement your skills for a mutually beneficial partnership!`
                   : "We'll match you with students who excel in your areas of need and need support in your areas of strength – creating a mutually beneficial learning partnership!"
                 }
               </p>
@@ -225,21 +255,41 @@ export default function TutorConnectPage({ onNavigate, tutors }) {
           )}
 
           {filteredTutors.map((tutor) => (
-            <Card key={tutor.id} className="border-stone-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <Card key={tutor.id} className="relative border-stone-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              {tutor.matchScore >= 90 && (
+                <div className="absolute top-0 right-0 bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
+                  🏆 Perfect Match
+                </div>
+              )}
               <CardHeader className="pb-4">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-start space-x-3">
                     <div className="relative">
-                      <ImageWithFallback src={tutor.avatar} alt={tutor.name} className="w-16 h-16 rounded-full object-cover" />
+                      <ImageWithFallback src={tutor.avatar_url || "/default-avatar.png"} alt={tutor.name} className="w-16 h-16 rounded-full object-cover" />
                       {tutor.online && <div className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-400 border-2 border-white rounded-full"></div>}
                     </div>
                     <div className="flex-1">
                       <h3 className="font-bold text-lg text-gray-800">{tutor.name}</h3>
                       <p className="text-sm text-gray-600">{tutor.year} • {tutor.major}</p>
                       <div className="flex items-center space-x-2 mt-1">
-                        <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0">
-                          {tutor.matchScore || 0}% Match
-                        </Badge>
+                        <Badge
+                            className={
+                              tutor.matchScore >= 90
+                                ? "bg-gradient-to-r from-yellow-400 to-orange-400 text-white border-0"
+                                : "bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0"
+                            }
+                          >
+                            {tutor.matchScore || 0}% Match
+                          </Badge>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {tutor.matchScore >= 90
+                              ? "Exact skill complement"
+                              : tutor.matchScore >= 80
+                              ? "Strong mutual support"
+                              : tutor.matchScore >= 40
+                              ? "Some overlap"
+                              : "No overlap"}
+                          </p>
                         {tutor.online && <span className="text-xs text-emerald-600">● Online</span>}
                       </div>
                     </div>
@@ -256,14 +306,14 @@ export default function TutorConnectPage({ onNavigate, tutors }) {
               </CardHeader>
 
               <CardContent className="space-y-4">
-                <p className="text-sm text-gray-700 bg-teal-50 p-3 rounded-lg border border-teal-100">{tutor.bio}</p>
+                <p className="text-sm text-gray-700 bg-green-100 p-3 rounded-lg border border-teal-400">{tutor.bio}</p>
 
                 <div>
                   <h4 className="text-sm font-semibold text-emerald-700 mb-2 flex items-center">
                     💪 Can help you with:
                   </h4>
                   <div className="flex flex-wrap gap-1">
-                    {tutor.strengths?.map((s, i) => (
+                    {tutor.areasOfStrength?.map((s, i) => (
                       <Badge key={i} className="text-xs border-emerald-300 text-emerald-700 bg-emerald-50">{s}</Badge>
                     ))}
                   </div>
@@ -274,14 +324,14 @@ export default function TutorConnectPage({ onNavigate, tutors }) {
                     🎯 Needs help with:
                   </h4>
                   <div className="flex flex-wrap gap-1">
-                    {tutor.needsHelp?.map((n, i) => (
+                    {tutor.areasOfDevelopment?.map((n, i) => (
                       <Badge key={i} className="text-xs border-amber-300 text-amber-700 bg-amber-50">{n}</Badge>
                     ))}
                   </div>
                 </div>
 
                 <div className="flex space-x-2 pt-4 border-t border-stone-200">
-                  <Button className="flex-1 border border-teal-300 text-teal-600 hover:bg-teal-50">View Profile</Button>
+                  <button onClick={() => navigate(`/profile/${tutor.id}`)} className="flex-1 border rounded-md border-teal-300 text-teal-600 hover:bg-teal-50">View Profile</button>
                   <Button
                     onClick={handleConnect}
                     className="flex-1 bg-gradient-to-r from-teal-500 to-cyan-500 text-white"

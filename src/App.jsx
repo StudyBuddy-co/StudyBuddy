@@ -13,6 +13,7 @@ import ContactPage from "./pages/Contact"
 import Dashboard from "./pages/Dashboard"
 import Profile from "./pages/Profile"
 import FindTutor from "./pages/FindTutor"
+import PublicProfile from "./pages/PublicProfile";
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth()
@@ -75,6 +76,8 @@ function openSignup() {
               </ProtectedRoute>
             }
           />
+
+<Route path="/profile/:id" element={<PublicProfile />} />
 
         </Routes>
 
