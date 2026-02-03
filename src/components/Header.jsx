@@ -63,7 +63,7 @@ export function Header() {
     <>
       <NavLink to="/dashboard" className={navClass}>Dashboard</NavLink>
       <NavLink to="/findtutor" className={navClass}>Find Tutor</NavLink>
-      <NavLink to="/messaging" className={navClass}>Messaging</NavLink>
+      <NavLink to="/messages" className={navClass}>Messaging</NavLink>
       <NavLink to="/contact" className={navClass}>Contact</NavLink>
     </>
   ) : (

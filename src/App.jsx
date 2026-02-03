@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { AuthProvider } from "./auth/authProvider";
 import { useAuth } from "./auth/useAuth";
+import { supabase } from "./services/supabaseClient";
 
 import { Header } from "./components/Header"
 import { Footer } from "./components/Footer"
@@ -14,6 +15,7 @@ import Dashboard from "./pages/Dashboard"
 import Profile from "./pages/Profile"
 import FindTutor from "./pages/FindTutor"
 import PublicProfile from "./pages/PublicProfile";
+import Message from "./pages/Message"
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth()
@@ -21,8 +23,29 @@ function ProtectedRoute({ children }) {
 }
 
 function App() {
+const { user } = useAuth()
 const [authOpen, setAuthOpen] = useState(false)
 const [authMode, setAuthMode] = useState("signup")
+
+useEffect(() => {
+  if (!user?.id) return;
+
+  const updateLastSeen = async () => {
+    await supabase
+      .from("profile")
+      .update({ last_seen: new Date().toISOString() })
+      .eq("id", user.id);
+  };
+
+  // update immediately on load
+  updateLastSeen();
+
+  // heartbeat every 15 seconds
+  const interval = setInterval(updateLastSeen, 15000);
+
+  return () => clearInterval(interval);
+}, [user]);
+
 function openSignup() {
   window.scrollTo({ top: 0, behavior: "smooth" })
   setAuthMode("signup")
@@ -73,6 +96,15 @@ function openSignup() {
             element={
               <ProtectedRoute>
                 <FindTutor />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/messages"
+            element={
+              <ProtectedRoute>
+                <Message />
               </ProtectedRoute>
             }
           />

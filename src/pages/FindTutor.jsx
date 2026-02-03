@@ -7,7 +7,7 @@ import { Badge } from "../components/Badge";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { useNavigate } from "react-router-dom";
 
-export default function TutorConnectPage({ onNavigate, tutors }) {
+export default function TutorConnectPage({ tutors }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -15,19 +15,67 @@ export default function TutorConnectPage({ onNavigate, tutors }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [computedTutors, setComputedTutors] = useState([]);
 
+/* just added code*/
+  // Lazy initializer to avoid calling impure function during render
+const [now, setNow] = useState(() => Date.now());
+
+useEffect(() => {
+  const interval = setInterval(() => {
+    setNow(Date.now());
+  }, 10_000); // updates every 10 seconds
+
+  return () => clearInterval(interval);
+}, []);
+
+   // ---------------------------
+  // HANDLE CONNECT Might get rid of online status it is currently not working!!
+  // ---------------------------
+  const handleConnect = async (tutor) => {
+    if (!currentUser || !tutor) return;
+
+    setIsLoading(true);
+
+    // 1️⃣ Check if conversation already exists
+    const { data: existingConvos } = await supabase
+      .from("conversations")
+      .select("*")
+      .contains("user_ids", [currentUser.id, tutor.id]);
+
+    let convo;
+    if (existingConvos && existingConvos.length > 0) {
+      convo = existingConvos[0];
+    } else {
+      // 2️⃣ Create new conversation if it doesn't exist
+      const { data: newConvo } = await supabase
+        .from("conversations")
+        .insert({ user_ids: [currentUser.id, tutor.id] })
+        .select("*")
+        .maybeSingle();
+      convo = newConvo;
+    }
+
+    // 3️⃣ Show loading screen and redirect
+    setTimeout(() => {
+      setIsLoading(false);
+      navigate("/messages", {
+        state: { tutorId: tutor.id, conversationId: convo.id },
+      });
+    }, 1500);
+  };
+/*until here */
   const goToProfile = () => {
     navigate("/profile"); // <-- navigate to profile page
   };
 
   const filterOptions = ["High Match (80%+)", "Online Now", "Most Experienced", "All Peer Tutors"];
 
-  const handleConnect = () => {
+  /*const handleConnect = () => {
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
       onNavigate("messages");
     }, 2000);
-  };
+  };*/
 
     // -------------------------------
   // MATCHING ALGORITHM
@@ -98,16 +146,52 @@ export default function TutorConnectPage({ onNavigate, tutors }) {
         .neq("id", user.id);
 
       // Compute match scores
-      const scoredTutors = (students || []).map(tutor => ({
-        ...tutor,
-        matchScore: calculateMatchScore(profile, tutor)
-      }));
+
+    const scoredTutors = (students || []).map(tutor => ({
+  ...tutor,
+  matchScore: calculateMatchScore(profile, tutor),
+  isOnline:
+    tutor.last_seen &&
+    now - new Date(tutor.last_seen).getTime() < 30_000
+}));
 
       setComputedTutors(scoredTutors);
     };
 
     fetchData();
   }, []);
+
+  /*just added code */
+// ---------------------------
+// SUBSCRIBE TO ONLINE STATUS UPDATES, Might get rid of online status it is currently not working!!
+// ---------------------------
+useEffect(() => {
+  if (!currentUser) return; // wait until we have the logged-in user
+
+  const subscription = supabase
+    .channel("online-status")
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "profile" },
+      (payload) => {
+        setComputedTutors((prev) =>
+          prev.map((tutor) =>
+            tutor.id === payload.new.id
+              ? {
+                  ...tutor,
+                  isOnline:
+                    payload.new.last_seen &&
+                    Date.now() - new Date(payload.new.last_seen).getTime() < 30_000
+                }
+              : tutor
+          )
+        );
+      }
+    )
+    .subscribe();
+
+  return () => supabase.removeChannel(subscription);
+}, [currentUser]); /*until here */
 
     // Use computed tutors if available (fallback to props)
   const tutorsWithScores = computedTutors.length > 0
@@ -117,28 +201,30 @@ export default function TutorConnectPage({ onNavigate, tutors }) {
 
   // Filter tutors based on search + selected filter
     let results = (tutorsWithScores || []).filter((tutor) => {
-    const matchesSearch =
-      (tutor.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tutor.areasOfStrength?.some(s =>
-        s.toLowerCase().includes(searchQuery.toLowerCase())
-      ) ||
-      tutor.areasOfDevelopment?.some(n =>
-        n.toLowerCase().includes(searchQuery.toLowerCase())
-      ) ||
-      tutor.major?.toLowerCase().includes(searchQuery.toLowerCase());
+  const matchesSearch =
+    (tutor.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    tutor.areasOfStrength?.some(s =>
+      s.toLowerCase().includes(searchQuery.toLowerCase())
+    ) ||
+    tutor.areasOfDevelopment?.some(n =>
+      n.toLowerCase().includes(searchQuery.toLowerCase())
+    ) ||
+    tutor.major?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    if (!matchesSearch) return false;
+  if (!matchesSearch) return false;
 
-    if (selectedFilter === "High Match (80%+)") {
-      return tutor.matchScore >= 80;
-    }
+  const isOnline = tutor.isOnline;
 
-    if (selectedFilter === "Online Now") {
-      return tutor.online;
-    }
+  if (selectedFilter === "High Match (80%+)") {
+    return tutor.matchScore >= 80;
+  }
 
-    return true;
-    });
+  if (selectedFilter === "Online Now") {
+    return isOnline;
+  }
+
+  return true;
+});
 
     // Exact matches always float to the top
     results.sort((a, b) =>
@@ -156,7 +242,7 @@ export default function TutorConnectPage({ onNavigate, tutors }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-stone-50 to-teal-50">
+      <div className="flex flex-col bg-gradient-to-br from-stone-50 to-teal-50 p-6">
         <Card className="w-96 p-8 text-center shadow-xl border-teal-200">
           <div className="space-y-6">
             <div className="text-6xl animate-bounce">🤝</div>
@@ -175,7 +261,7 @@ export default function TutorConnectPage({ onNavigate, tutors }) {
   }
 
   return (
-    <div className="min-h-screen p-6 bg-gradient-to-br from-stone-50 to-teal-50">
+    <div className=" p-6 bg-gradient-to-br from-stone-50 to-teal-50">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Page header */}
         <div className="text-center space-y-4">
@@ -266,7 +352,7 @@ export default function TutorConnectPage({ onNavigate, tutors }) {
                   <div className="flex items-start space-x-3">
                     <div className="relative">
                       <ImageWithFallback src={tutor.avatar_url || "/default-avatar.png"} alt={tutor.name} className="w-16 h-16 rounded-full object-cover" />
-                      {tutor.online && <div className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-400 border-2 border-white rounded-full"></div>}
+
                     </div>
                     <div className="flex-1">
                       <h3 className="font-bold text-lg text-gray-800">{tutor.name}</h3>
@@ -290,7 +376,9 @@ export default function TutorConnectPage({ onNavigate, tutors }) {
                               ? "Some overlap"
                               : "No overlap"}
                           </p>
-                        {tutor.online && <span className="text-xs text-emerald-600">● Online</span>}
+                        {tutor.isOnline && (
+                            <span className="text-xs text-emerald-600">● Online</span>
+                          )}
                       </div>
                     </div>
                   </div>
@@ -333,7 +421,7 @@ export default function TutorConnectPage({ onNavigate, tutors }) {
                 <div className="flex space-x-2 pt-4 border-t border-stone-200">
                   <button onClick={() => navigate(`/profile/${tutor.id}`)} className="flex-1 border rounded-md border-teal-300 text-teal-600 hover:bg-teal-50">View Profile</button>
                   <Button
-                    onClick={handleConnect}
+                    onClick={() => handleConnect(tutor)}
                     className="flex-1 bg-gradient-to-r from-teal-500 to-cyan-500 text-white"
                   >
                     Connect

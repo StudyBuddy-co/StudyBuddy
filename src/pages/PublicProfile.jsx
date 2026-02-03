@@ -36,7 +36,7 @@ export default function TutorProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-50 to-teal-50 p-6">
+    <div className="bg-gradient-to-br from-stone-50 to-teal-50 p-6">
       <div className="max-w-4xl mx-auto space-y-6">
 
         {/* Header */}
