@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 /*import { collection, addDoc, serverTimestamp } from "firebase/firestore";*/
 /*import { db } from "../services/Firebase";*/
 import { useAuth } from "../auth/useAuth";
+import { supabase } from "../services/supabaseClient";
 
 export default function ContactPage() {
   const { user } = useAuth();
@@ -27,15 +28,19 @@ export default function ContactPage() {
         throw new Error("Please fill in all required fields.");
       }
 
-      await addDoc(collection(db, "contactMessages"), {
-        name: `${firstName} ${lastName}`,
-        email,
-        subject: subject || "General Inquiry",
-        message,
-        status: "new",
-        userId: user?.uid || null,
-        createdAt: serverTimestamp(),
-      });
+      const { error: supaError } = await supabase
+        .from("contact_messages")
+        .insert({
+          user_id: user?.id || null,
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          subject: subject || "General Inquiry",
+          message,
+          status: "new"
+        });
+
+      if (supaError) throw supaError;
 
       setSuccess(true);
       setFirstName("");
