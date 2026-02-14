@@ -113,8 +113,8 @@ useEffect(() => {
     )
     .subscribe();
 
-  return () => supabase.removeChannel(sub);
-}, [tutorProfile]);
+  return () => sub.unsubscribe();
+}, [tutorProfile?.id]);
 
 /* if this doenst work use sql,
 create policy "Users can update their own profile"
@@ -206,7 +206,7 @@ if (tutorIds?.length) {
       )
       .subscribe();
 
-    return () => supabase.removeChannel(sub);
+    return () => sub.unsubscribe();
   }, [currentUser]);
 
   /* -------------------- TUTOR PROFILE + MATCH -------------------- */
@@ -234,20 +234,31 @@ if (tutorIds?.length) {
 
   /* -------------------- MESSAGES -------------------- */
   useEffect(() => {
-    if (!selectedChat) return;
+    if (!selectedChat || !currentUser) return;
 
     const fetchMessages = async () => {
-      const { data } = await supabase
-        .from("messages")
-        .select("*")
-        .eq("conversation_id", selectedChat.id)
-        .order("created_at");
-      setMessages(data ?? []);
+      try {
+        const { data, error } = await supabase
+          .from("messages")
+          .select("*")
+          .eq("conversation_id", selectedChat.id)
+          .order("created_at");
+
+        if (error) {
+          console.error("Failed to fetch messages:", error);
+          return;
+        }
+        setMessages(data ?? []);
+      } catch (err) {
+        console.error("Error fetching messages:", err);
+      }
     };
+
     fetchMessages();
 
+    const channelName = `messages:${selectedChat.id}`;
     const sub = supabase
-      .channel("public:messages")
+      .channel(channelName)
       .on(
         "postgres_changes",
         {
@@ -256,12 +267,25 @@ if (tutorIds?.length) {
           table: "messages",
           filter: `conversation_id=eq.${selectedChat.id}`,
         },
-        (payload) => setMessages((m) => [...m, payload.new])
+        (payload) => {
+          console.log("New message received:", payload);
+          setMessages((m) => [...m, payload.new]);
+        }
       )
-      .subscribe();
+      .on("subscribe", (status) => {
+        console.log(`Subscribed to ${channelName}:`, status);
+      })
+      .on("error", (error) => {
+        console.error(`Realtime error on ${channelName}:`, error);
+      })
+      .subscribe((status) => {
+        console.log(`Channel ${channelName} subscription status:`, status);
+      });
 
-    return () => supabase.removeChannel(sub);
-  }, [selectedChat]);
+    return () => {
+      sub.unsubscribe();
+    };
+  }, [selectedChat?.id, currentUser?.id]);
 
   /* -------------------- TYPING INDICATOR -------------------- */
   useEffect(() => {
@@ -276,8 +300,8 @@ if (tutorIds?.length) {
       )
       .subscribe();
 
-    return () => supabase.removeChannel(typingChannel);
-  }, [selectedChat]);
+    return () => typingChannel.unsubscribe();
+  }, [selectedChat?.id]);
 
   /* -------------------- HANDLE CONNECT --------------------
   const handleConnect = async (tutor) => {

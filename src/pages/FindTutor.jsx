@@ -190,7 +190,7 @@ useEffect(() => {
     )
     .subscribe();
 
-  return () => supabase.removeChannel(subscription);
+  return () => subscription.unsubscribe();
 }, [currentUser]); /*until here */
 
     // Use computed tutors if available (fallback to props)
