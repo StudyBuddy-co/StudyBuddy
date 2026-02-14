@@ -1,7 +1,7 @@
-// src/services/supabaseClient.js
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = "https://rbzmkkmqigutdkwtidbl.supabase.co"; // from Supabase dashboard
-const supabaseKey = "sb_publishable_w0Mfdgj0-U5mV1l4jkX0kA_KGR6mNZu"; // from Supabase dashboard -> API -> anon key
+// Use environment variables from .env
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseKey);

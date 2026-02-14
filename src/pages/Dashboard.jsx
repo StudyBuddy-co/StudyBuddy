@@ -10,12 +10,12 @@ export default function Dashboard() {
   const { userProfile, setUserProfile } = useAuth()
 
   const quickActions = [
-    { title: "Find Tutors", icon: "🔍", path: "/findtutor", description: "Connect with expert tutors" },
-    { title: "Messages", icon: "💬", path: "/messages", description: "Chat with your tutors" },
-    { title: "Resources", icon: "📚", path: "/resources", description: "Access study materials" },
-    { title: "AI Assistant", icon: "🤖", path: "/ai-assistant", description: "Get AI-powered help" },
-    { title: "Meeting Room", icon: "📞", path: "/meeting-room", description: "Join video sessions" },
-    { title: "Profile", icon: "👤", path: "/profile", description: "Manage your profile" },
+    { title: "Find Tutors", icon: "🔍", path: "/findtutor", description: "Connect with expert tutors", disabled: false },
+    { title: "Messages", icon: "💬", path: "/messages", description: "Chat with your tutors", disabled: false },
+    { title: "Resources", icon: "📚", path: "/resources", description: "Access study materials", disabled: true },
+    { title: "AI Assistant", icon: "🤖", path: "/ai-assistant", description: "Get AI-powered help", disabled: true },
+    { title: "Meeting Room", icon: "📞", path: "/meeting-room", description: "Join video sessions", disabled: true },
+    { title: "Profile", icon: "👤", path: "/profile", description: "Manage your profile", disabled: false },
   ]
 
   const upcomingSessions = [
@@ -52,8 +52,12 @@ export default function Dashboard() {
             {quickActions.map((action) => (
               <Card
                 key={action.title}
-                onClick={() => navigate(action.path)}
-                className="cursor-not-allowed hover:scale-105 transition shadow-sm "
+                onClick={() => {
+                  if (action.disabled) return; // stop navigation
+                  navigate(action.path);
+                }}
+                className={`transition shadow-sm
+                            ${action.disabled ? "cursor-not-allowed opacity-50" : "hover:scale-105 cursor-pointer"}`}
               >
                 <CardContent className="p-6 text-center">
                   <div className="text-3xl mb-2">{action.icon}</div>
@@ -98,15 +102,21 @@ export default function Dashboard() {
                     </div>
                   </div>
                 ))}
-<button
-  onClick={() => navigate("/messaging")}
-  className="w-full border border-teal-300 text-teal-600 hover:bg-teal-50 rounded-md py-2"
->
-  Schedule New Session
-</button>
+                  <button
+                    onClick={() => navigate("/messaging")}
+                    className="w-full border border-teal-300 text-teal-600 hover:bg-teal-50 rounded-md py-2"
+                  >
+                    Schedule New Session
+                  </button>
               </CardContent>
             </Card>
           </div>
+
+      <div className="relative bg-white rounded-xl shadow-lg p-8 text-center opacity-60 cursor-not-allowed pointer-events-none">
+        {/* Coming Soon Badge */}
+        <span className="absolute top-4 right-4 text-xs font-semibold uppercase tracking-wide bg-gray-200 text-gray-600 px-3 py-1 rounded-full">
+          Coming Soon
+        </span>
 
           {/* Right Column: Study Progress */}
           <div className="space-y-6">
@@ -161,5 +171,6 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+</div>
   )
 }

@@ -1,0 +1,11 @@
+{
+  "imports": {
+    "@supabase/functions-js": "jsr:@supabase/functions-js@^2"
+  },
+  "imports": {
+    "@supabase/functions-js/edge-runtime.d.ts": "https://cdn.jsdelivr.net/npm/@supabase/functions-js@2.95.3/src/edge-runtime.d.ts"
+  },
+  "tasks": {
+    "add-dep": "deno install npm:@supabase/supabase-js"
+  }
+}

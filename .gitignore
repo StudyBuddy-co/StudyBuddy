@@ -46,3 +46,9 @@ Thumbs.db
 # Vite / cache
 # =====================
 .vite/
+
+# Deno
+deno.lock
+
+# Supabase temp files
+supabase/.temp/

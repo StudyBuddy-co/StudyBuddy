@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
-/*import { collection, addDoc, serverTimestamp } from "firebase/firestore";*/
-/*import { db } from "../services/Firebase";*/
 import { useAuth } from "../auth/useAuth";
-import { supabase } from "../services/supabaseClient";
+//import { supabase } from "../services/supabaseClient";
 
 export default function ContactPage() {
   const { user } = useAuth();
+  const EDGE_SECRET = import.meta.env.VITE_EDGE_SECRET;
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -17,51 +16,59 @@ export default function ContactPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setError("");
-    setSuccess(false);
-    setLoading(true);
 
-    try {
-      if (!firstName || !lastName || !email || !message) {
-        throw new Error("Please fill in all required fields.");
-      }
+async function handleSubmit(e) {
+  e.preventDefault();
+  setLoading(true);
+  setError("");
+  setSuccess(false);
 
-      const { error: supaError } = await supabase
-        .from("contact_messages")
-        .insert({
-          user_id: user?.id || null,
-          first_name: firstName,
-          last_name: lastName,
-          email,
-          subject: subject || "General Inquiry",
-          message,
-          status: "new"
-        });
-
-      if (supaError) throw supaError;
-
-      setSuccess(true);
-      setFirstName("");
-      setLastName("");
-      setEmail("");
-      setSubject("");
-      setMessage("");
-    } catch (err) {
-      console.error(err);
-      setError(err.message || "Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
+  try {
+    if (!firstName || !lastName || !email || !message) {
+      throw new Error("Please fill in all required fields.");
     }
+
+    const formData = {
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      subject: subject || "General Inquiry",
+      message,
+      status: "new",
+      created_at: new Date().toISOString(),
+      user_id: user?.id || null,
+    };
+
+    // send to your edge function, which handles Notion & supabase
+    const response = await fetch(
+      "https://rbzmkkmqigutdkwtidbl.functions.supabase.co/contact-to-notion",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${EDGE_SECRET}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ record: formData }),
+      }
+    );
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Failed to submit form");
+
+    setSuccess(true);
+    setFirstName(""); setLastName(""); setEmail(""); setSubject(""); setMessage("");
+
+  } catch (err) {
+    console.error(err);
+    setError(err.message || "Something went wrong");
+  } finally {
+    setLoading(false);
   }
+}
 
   useEffect(() => {
     if (success) {
-      const timer = setTimeout(() => {
-        setSuccess(false);
-      }, 6000); // 6 seconds
-
+      const timer = setTimeout(() => setSuccess(false), 6000);
       return () => clearTimeout(timer);
     }
   }, [success]);
