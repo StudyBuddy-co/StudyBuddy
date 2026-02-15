@@ -31,7 +31,7 @@ export default function Dashboard() {
 }, [setUserProfile])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-50 to-teal-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-stone-50 to-teal-50 py-16">
       <div className="max-w-7xl mx-auto space-y-8">
 
         {/* Welcome */}

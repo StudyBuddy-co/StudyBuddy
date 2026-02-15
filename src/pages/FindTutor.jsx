@@ -242,7 +242,7 @@ useEffect(() => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col bg-gradient-to-br from-stone-50 to-teal-50 p-6">
+      <div className="flex flex-col items-center justify-center bg-gradient-to-br from-stone-50 to-teal-50 p-6">
         <Card className="w-96 p-8 text-center shadow-xl border-teal-200">
           <div className="space-y-6">
             <div className="text-6xl animate-bounce">🤝</div>
@@ -261,7 +261,7 @@ useEffect(() => {
   }
 
   return (
-    <div className=" p-6 bg-gradient-to-br from-stone-50 to-teal-50">
+    <div className="py-20 bg-gradient-to-br from-stone-50 to-teal-50">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Page header */}
         <div className="text-center space-y-4">

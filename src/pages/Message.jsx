@@ -239,10 +239,13 @@ if (tutorIds?.length) {
     const fetchMessages = async () => {
       try {
         const { data, error } = await supabase
-          .from("messages")
-          .select("*")
-          .eq("conversation_id", selectedChat.id)
-          .order("created_at");
+  .from("messages")
+  .select(`
+    *,
+    meeting:meeting_id (*)
+  `)
+  .eq("conversation_id", selectedChat.id)
+  .order("created_at");
 
         if (error) {
           console.error("Failed to fetch messages:", error);
@@ -269,7 +272,43 @@ if (tutorIds?.length) {
         },
         (payload) => {
           console.log("New message received:", payload);
-          setMessages((m) => [...m, payload.new]);
+
+          // If it has a meeting_id, fetch the full message with the relationship
+          if (payload.new.meeting_id) {
+            supabase
+              .from("messages")
+              .select(`
+                *,
+                meeting:meeting_id (*)
+              `)
+              .eq("id", payload.new.id)
+              .maybeSingle()
+              .then(({ data: fullMessage }) => {
+                if (fullMessage) {
+                  setMessages((m) => [...m, fullMessage]);
+                }
+              });
+          } else {
+            // Regular message, just add it
+            setMessages((m) => [...m, payload.new]);
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "meetings",
+        },
+        (payload) => {
+          setMessages((msgs) =>
+            msgs.map((m) =>
+              m.meeting_id === payload.new.id
+                ? { ...m, meeting: payload.new }
+                : m
+            )
+          );
         }
       )
       .on("subscribe", (status) => {
@@ -335,22 +374,313 @@ if (tutorIds?.length) {
   };
 */
   /* -------------------- SEND MESSAGE -------------------- */
+// --- Meeting Scheduling Logic ---
+const [showScheduleModal, setShowScheduleModal] = useState(false);
+const [selectedDate, setSelectedDate] = useState(null);
+const [selectedTime, setSelectedTime] = useState(null);
+const [currentMonth, setCurrentMonth] = useState(new Date());
+
+const generateTimeSlots = () => {
+  const slots = [];
+
+  for (let hour = 9; hour <= 17; hour++) {
+    const date = new Date();
+    date.setHours(hour, 0, 0, 0);
+
+    slots.push({
+      value: `${hour.toString().padStart(2, "0")}:00`, // DB safe
+      label: date.toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      }), // 1:00 PM
+    });
+  }
+
+  return slots;
+};
+
+const timeSlots = generateTimeSlots();
+
+const isSlotInPast = (slotValue) => {
+  if (!selectedDate) return false;
+
+  const now = new Date();
+  const slotDate = new Date(selectedDate);
+
+  const [hour, minute] = slotValue.split(":");
+  slotDate.setHours(Number(hour), Number(minute), 0, 0);
+
+  return slotDate < now;
+};
+
+const getDaysInMonth = (date) => {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const daysInMonth = lastDay.getDate();
+  const startingDayOfWeek = firstDay.getDay();
+  return { daysInMonth, startingDayOfWeek, year, month };
+};
+
+const isDateAvailable = (date) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return date >= today;
+};
+
+const handleDateSelect = (day) => {
+  const { year, month } = getDaysInMonth(currentMonth);
+  const selected = new Date(year, month, day);
+  if (isDateAvailable(selected)) {
+    setSelectedDate(selected);
+    setSelectedTime(null);
+  }
+};
+
+const handleScheduleRequest = async () => {
+  if (!selectedDate || !selectedTime || !selectedChat?.id || !currentUser?.id) return;
+
+  const tutorId = selectedChat.user_ids.find(id => id !== currentUser.id);
+
+const scheduledAt = new Date(selectedDate);
+const [hour, minute] = selectedTime.split(":");
+
+scheduledAt.setHours(Number(hour), Number(minute), 0, 0);
+
+  const { data: conflicts } = await supabase
+  .from("meetings")
+  .select("id")
+  .eq("conversation_id", selectedChat.id)
+  .eq("scheduled_at", scheduledAt.toISOString())
+  .in("status", ["pending", "confirmed"]);
+
+if (conflicts?.length) {
+  alert("That time is already booked.");
+  return;
+}
+
+  // 1️⃣ Create meeting row
+  const { data: meeting, error: meetingError } = await supabase
+    .from("meetings")
+    .insert({
+      conversation_id: selectedChat.id,
+      room_id: crypto.randomUUID(),
+      created_by: currentUser.id,
+      participant_id: tutorId,
+      scheduled_at: scheduledAt.toISOString(),
+      status: "pending"
+    })
+    .select()
+    .single();
+
+  if (meetingError) {
+    console.error(meetingError);
+    return;
+  }
+
+  // 2️⃣ Send chat message referencing meeting
+  const { data: insertedMessage, error: msgError } = await supabase.from("messages").insert({
+    conversation_id: selectedChat.id,
+    sender_id: currentUser.id,
+    message: `Meeting scheduled for ${new Date(scheduledAt).toLocaleDateString()} at ${new Date(scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+    meeting_id: meeting.id
+  }).select(`*,meeting:meeting_id(*)`).single();
+
+  if (msgError) {
+    console.error("Message insert error:", msgError);
+    return;
+  }
+
+  // Optimistically add message with meeting to state
+  if (insertedMessage) {
+    setMessages((msgs) =>
+  msgs.some((m) => m.id === insertedMessage.id)
+    ? msgs
+    : [...msgs, insertedMessage]
+);
+  }
+
+  setShowScheduleModal(false);
+  setSelectedDate(null);
+  setSelectedTime(null);
+};
+
+const handleConfirmMeeting = async (meetingId) => {
+  const { data: updatedMeeting, error } = await supabase
+    .from("meetings")
+    .update({ status: "confirmed" })
+    .eq("id", meetingId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  // Update message with new meeting status
+  setMessages((msgs) =>
+    msgs.map((m) =>
+      m.meeting_id === meetingId
+        ? { ...m, meeting: updatedMeeting }
+        : m
+    )
+  );
+};
+
+const handleDeclineMeeting = async (meetingId) => {
+  const meeting = messages.find(m => m.meeting?.id === meetingId)?.meeting;
+
+  if (!meeting || meeting.participant_id !== currentUser.id) return;
+  const { data: updatedMeeting, error } = await supabase
+    .from("meetings")
+    .update({ status: "declined" })
+    .eq("id", meetingId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  setMessages((msgs) =>
+    msgs.map((m) =>
+      m.meeting_id === meetingId
+        ? { ...m, meeting: updatedMeeting }
+        : m
+    )
+  );
+};
+
+const handleCancelMeeting = async (meetingId) => {
+  const meeting = messages.find(m => m.meeting?.id === meetingId)?.meeting;
+
+  if (!meeting || meeting.created_by !== currentUser.id) return;
+  const { data: updatedMeeting, error } = await supabase
+    .from("meetings")
+    .update({ status: "cancelled" })
+    .eq("id", meetingId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  setMessages((msgs) =>
+    msgs.map((m) =>
+      m.meeting_id === meetingId
+        ? { ...m, meeting: updatedMeeting }
+        : m
+    )
+  );
+};
+
+const renderCalendar = () => {
+  const { daysInMonth, startingDayOfWeek, year, month } = getDaysInMonth(currentMonth);
+  const days = [];
+  for (let i = 0; i < startingDayOfWeek; i++) {
+    days.push(<div key={`empty-${i}`} className="w-8 h-8" />);
+  }
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day);
+    const isAvailable = isDateAvailable(date);
+    const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
+    days.push(
+      <button
+        key={day}
+        className={`w-8 h-8 rounded-full text-sm font-medium ${isSelected ? "bg-teal-500 text-white" : isAvailable ? "bg-white hover:bg-teal-100" : "bg-gray-100 text-gray-400"}`}
+        disabled={!isAvailable}
+        onClick={() => isAvailable && handleDateSelect(day)}
+      >
+        {day}
+      </button>
+    );
+  }
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))} className="px-2 py-1 text-lg">←</button>
+        <span className="font-semibold">{currentMonth.toLocaleString("default", { month: "long", year: "numeric" })}</span>
+        <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))} className="px-2 py-1 text-lg">→</button>
+      </div>
+      <div className="grid grid-cols-7 gap-1 mb-1 text-xs text-gray-500">
+        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+      </div>
+      <div className="grid grid-cols-7 gap-1">{days}</div>
+    </div>
+  );
+};
+
+const renderScheduleModal = () => {
+  if (!showScheduleModal) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setShowScheduleModal(false)}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative" onClick={e => e.stopPropagation()}>
+        <button className="absolute top-3 right-3 text-gray-400 hover:text-gray-700" onClick={() => setShowScheduleModal(false)} aria-label="Close">✕</button>
+        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">📅 Schedule Meeting</h2>
+        <div className="mb-4">{renderCalendar()}</div>
+        {selectedDate && (
+          <div className="mb-4">
+            <div className="font-medium mb-2 flex items-center gap-2">⏰ Select Time</div>
+            <div className="flex flex-wrap gap-2">
+              {timeSlots.map(slot => {
+                const isPast = isSlotInPast(slot.value);
+                return (
+                  <button
+                    key={slot.value}
+                    disabled={isPast}
+                    className={`px-3 py-1 rounded-lg border ${
+                      isPast
+                        ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                        : selectedTime === slot.value
+                        ? "bg-teal-500 text-white border-teal-500"
+                        : "bg-white border-gray-200 hover:bg-teal-100"
+                    }`}
+                    onClick={() => !isPast && setSelectedTime(slot.value)}
+                  >
+                    {slot.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        <div className="flex justify-end gap-2 mt-4">
+          <Button onClick={handleScheduleRequest} disabled={!selectedDate || !selectedTime} className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white">Request Meeting</Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const handleSendMessage = async () => {
   if (!newMessage.trim() || !selectedChat?.id || !currentUser?.id) return;
 
+  const messageText = newMessage.trim();
+
   try {
-    const { error } = await supabase.from("messages").insert({
+    const { data: insertedMessage, error } = await supabase.from("messages").insert({
       conversation_id: selectedChat.id,
       sender_id: currentUser.id,
-      message: newMessage.trim(),
-    });
+      message: messageText
+    }).select().single();
 
     if (error) {
       console.error("Failed to send message:", error);
       return;
     }
 
-    setNewMessage(""); // only clear input, do NOT append to state
+    // Immediately add the message to state (optimistic update)
+    setMessages((msgs) =>
+  msgs.some((m) => m.id === insertedMessage.id)
+    ? msgs
+    : [...msgs, insertedMessage]
+);
+    setNewMessage("");
   } catch (err) {
     console.error(err);
   }
@@ -389,7 +719,7 @@ const handleSendMessage = async () => {
   }
 
   return (
-    <div className="bg-gradient-to-br from-stone-50 to-teal-50 p-6">
+    <div className="bg-gradient-to-br from-stone-50 to-teal-50 py-20">
       <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
@@ -409,7 +739,7 @@ const handleSendMessage = async () => {
               <p className="text-sm text-teal-600">Browse matched peer tutors and connect instantly.</p>
             </div>
             <Button
-              onClick={() => navigate("/tutor-connect")}
+              onClick={() => navigate("/findtutor")}
               className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white"
             >
               Find Tutors
@@ -482,23 +812,109 @@ const handleSendMessage = async () => {
               )}
 
               <CardContent className="flex-1 overflow-y-auto space-y-2">
-                {messages.map((m) => (
-                  <div key={m.id + (m.sender_id || "")} className={`flex ${m.sender_id === currentUser?.id ? "justify-end" : "justify-start"}`}>
-                    <div className=" bg-stone-600/10 text-gray-900 px-4 py-2 rounded-xl bg-stone-100 relative">
-                      <p>{m.message}</p>
-                      <span className="text-xs text-gray-500 absolute bottom-0 right-1">
-                        {m.sender_id === currentUser?.id && <span className="ml-1">{m.read ? "✓✓" : "✓"}</span>}
-                      </span>
+                {messages.map((m) => {
+                  if (m.meeting) {
+                    const scheduled = new Date(m.meeting.scheduled_at);
+                    const isRequester = m.meeting.created_by === currentUser?.id;
+                    const isParticipant = m.meeting.participant_id === currentUser?.id;
+
+                    const statusStyles = {
+                      cyan: "bg-cyan-50 border-cyan-200",
+                      emerald: "bg-emerald-50 border-emerald-200",
+                      red: "bg-red-50 border-red-200",
+                      gray: "bg-gray-50 border-gray-200",
+                    };
+
+                    const statusConfig = {
+                      pending: { color: "cyan", icon: "📅", text: "Meeting Scheduled" },
+                      confirmed: { color: "emerald", icon: "✅", text: "Meeting Confirmed" },
+                      declined: { color: "red", icon: "✕", text: "Meeting Declined" },
+                      cancelled: { color: "gray", icon: "✕", text: "Meeting Cancelled" },
+                    };
+
+                    const { color, icon, text } = statusConfig[m.meeting.status] ?? statusConfig.pending;
+
+                    return (
+<div
+  key={m.id}
+  className={`flex my-2 ${
+    m.meeting.created_by === currentUser?.id
+      ? "justify-end"
+      : "justify-start"
+  }`}
+>
+                        <div className={`px-4 py-3 rounded-xl border max-w-xs ${statusStyles[color]}`}>
+                          <div className="font-semibold text-lg">{icon} {text}</div>
+
+                          {m.meeting.status !== "cancelled" && m.meeting.status !== "declined" && (
+                            <div className="text-sm text-gray-700 mt-1">
+                              {scheduled.toLocaleDateString()} at{" "}
+                              {scheduled.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </div>
+                          )}
+
+                          {/* Message for requester: show status */}
+                          {isRequester && m.meeting.status === "pending" && (
+                            <div className="text-xs text-gray-600 mt-2 mb-2">
+                              Awaiting confirmation from {tutorProfile?.name}
+                            </div>
+                          )}
+
+                          {/* Participant: confirm or decline */}
+                          {isParticipant && m.meeting.status === "pending" && (
+                            <div className="flex gap-2 justify-center mt-3">
+                              <Button
+                                size="sm"
+                                className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white"
+                                onClick={() => handleConfirmMeeting(m.meeting.id)}
+                              >
+                                ✅ Confirm
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="bg-red-500 text-white hover:bg-red-600"
+                                onClick={() => handleDeclineMeeting(m.meeting.id)}
+                              >
+                                ✕ Decline
+                              </Button>
+                            </div>
+                          )}
+
+                          {/* Requester: cancel button if pending */}
+                          {isRequester && m.meeting.status === "pending" && (
+                            <div className="mt-2">
+                              <Button
+                                size="sm"
+                                className="bg-red-500 text-white hover:bg-red-600"
+                                onClick={() => handleCancelMeeting(m.meeting.id)}
+                              >
+                                ✕ Cancel
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+                  // Normal message
+                  return (
+                    <div key={m.id + (m.sender_id || "")} className={`flex ${m.sender_id === currentUser?.id ? "justify-end" : "justify-start"}`}>
+                      <div className=" bg-stone-600/10 text-gray-900 px-4 py-2 rounded-xl bg-stone-100 relative">
+                        <p>{m.message}</p>
+                        <span className="text-xs text-gray-500 absolute bottom-0 right-1">
+                          {m.sender_id === currentUser?.id && <span className="ml-1">{m.read ? "✓✓" : "✓"}</span>}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
 
                 {typingUsers.length > 0 && (
                   <div className="text-sm italic text-gray-500">{typingUsers.join(", ")} is typing...</div>
                 )}
               </CardContent>
 
-              <div className="p-4 border-t flex gap-2">
+              <div className="p-4 border-t flex gap-2 items-center">
                 <Input
                   value={newMessage}
                   onChange={(e) => handleTyping(e.target.value)}
@@ -506,7 +922,9 @@ const handleSendMessage = async () => {
                   onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
                 />
                 <Button onClick={handleSendMessage}>Send</Button>
+                <Button onClick={() => setShowScheduleModal(true)} className="flex items-center gap-1 bg-gradient-to-r from-teal-500 to-cyan-500 text-white">📅 Schedule</Button>
               </div>
+              {renderScheduleModal()}
             </Card>
           </div>
         </div>
