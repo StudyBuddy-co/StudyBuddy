@@ -127,12 +127,13 @@ const mainTags = [
     if (!error) {
     // Update global context immediately
     setUserProfile({
+      id: user.id,
       name: profile.name,
       avatar_url: profile.avatar_url
     })
 
     // Optional: fire event for other listeners (like Header)
-    window.dispatchEvent(new CustomEvent("profile-updated", { detail: { name: profile.name, avatar_url: profile.avatar_url }}))
+    window.dispatchEvent(new CustomEvent("profile-updated", { detail: { id: user.id, name: profile.name, avatar_url: profile.avatar_url }}))
   } else console.error(error);
     setIsEditing(false);
   };

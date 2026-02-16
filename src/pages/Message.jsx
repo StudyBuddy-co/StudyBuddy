@@ -615,48 +615,6 @@ const renderCalendar = () => {
   );
 };
 
-const renderScheduleModal = () => {
-  if (!showScheduleModal) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setShowScheduleModal(false)}>
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative" onClick={e => e.stopPropagation()}>
-        <button className="absolute top-3 right-3 text-gray-400 hover:text-gray-700" onClick={() => setShowScheduleModal(false)} aria-label="Close">✕</button>
-        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">📅 Schedule Meeting</h2>
-        <div className="mb-4">{renderCalendar()}</div>
-        {selectedDate && (
-          <div className="mb-4">
-            <div className="font-medium mb-2 flex items-center gap-2">⏰ Select Time</div>
-            <div className="flex flex-wrap gap-2">
-              {timeSlots.map(slot => {
-                const isPast = isSlotInPast(slot.value);
-                return (
-                  <button
-                    key={slot.value}
-                    disabled={isPast}
-                    className={`px-3 py-1 rounded-lg border ${
-                      isPast
-                        ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                        : selectedTime === slot.value
-                        ? "bg-teal-500 text-white border-teal-500"
-                        : "bg-white border-gray-200 hover:bg-teal-100"
-                    }`}
-                    onClick={() => !isPast && setSelectedTime(slot.value)}
-                  >
-                    {slot.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-        <div className="flex justify-end gap-2 mt-4">
-          <Button onClick={handleScheduleRequest} disabled={!selectedDate || !selectedTime} className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white">Request Meeting</Button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const handleSendMessage = async () => {
   if (!newMessage.trim() || !selectedChat?.id || !currentUser?.id) return;
 
@@ -803,11 +761,75 @@ const handleSendMessage = async () => {
                     </span>
                   </div>
                   <Button
-                    onClick={() => navigate("/schedule")}
+                    onClick={() => setShowScheduleModal(true)}
                     className="text-white bg-gradient-to-r from-teal-500 to-cyan-500 text-sm"
                   >
                     Schedule
                   </Button>
+{showScheduleModal && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+
+      <div className="flex justify-between items-center mb-4">
+        <div className="text-lg font-semibold">Schedule Meeting</div>
+        <button
+          onClick={() => setShowScheduleModal(false)}
+          className="text-gray-500 hover:text-gray-700"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="mb-4">
+        {renderCalendar()}
+      </div>
+
+      {selectedDate && (
+        <div className="mb-4">
+          <div className="font-medium mb-2 flex items-center gap-2">
+            ⏰ Select Time
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {timeSlots.map(slot => {
+              const isPast = isSlotInPast(slot.value);
+
+              return (
+                <button
+                  key={slot.value}
+                  disabled={isPast}
+                  className={`px-3 py-1 rounded-lg border ${
+                    isPast
+                      ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                      : selectedTime === slot.value
+                      ? "bg-teal-500 text-white border-teal-500"
+                      : "bg-white border-gray-200 hover:bg-teal-100"
+                  }`}
+                  onClick={() => !isPast && setSelectedTime(slot.value)}
+                >
+                  {slot.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-end gap-2 mt-4">
+        <Button
+          onClick={() => {
+            handleScheduleRequest();
+            setShowScheduleModal(false);
+          }}
+          disabled={!selectedDate || !selectedTime}
+          className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white"
+        >
+          Request Meeting
+        </Button>
+      </div>
+    </div>
+  </div>
+)}
                 </div>
               )}
 
@@ -922,9 +944,7 @@ const handleSendMessage = async () => {
                   onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
                 />
                 <Button onClick={handleSendMessage}>Send</Button>
-                <Button onClick={() => setShowScheduleModal(true)} className="flex items-center gap-1 bg-gradient-to-r from-teal-500 to-cyan-500 text-white">📅 Schedule</Button>
               </div>
-              {renderScheduleModal()}
             </Card>
           </div>
         </div>

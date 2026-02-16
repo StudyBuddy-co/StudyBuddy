@@ -1,3 +1,5 @@
+import { supabase } from "../services/supabaseClient";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../auth/useAuth"
 import { useEffect } from 'react'
@@ -8,6 +10,35 @@ import { ImageWithFallback } from "../figma/ImageWithFallback"
 export default function Dashboard() {
   const navigate = useNavigate()
   const { userProfile, setUserProfile } = useAuth()
+  const [sessions, setSessions] = useState([]);
+useEffect(() => {
+  if (!userProfile?.id) return;
+
+  const fetchMeetings = async () => {
+    const now = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from("meetings")
+      .select(`
+        *,
+        conversation:conversation_id (
+          id,
+          user_ids
+        )
+      `)
+      .or(`created_by.eq.${userProfile.id},participant_id.eq.${userProfile.id}`)
+      .in("status", ["pending", "confirmed"])
+      .gt("scheduled_at", now)    // upcoming only
+      .order("scheduled_at", { ascending: true })
+      .limit(3);
+
+    if (error) return;
+
+    setSessions(data ?? []);
+  };
+
+  fetchMeetings();
+}, [userProfile?.id]);
 
   const quickActions = [
     { title: "Find Tutors", icon: "🔍", path: "/findtutor", description: "Connect with expert tutors", disabled: false },
@@ -16,12 +47,6 @@ export default function Dashboard() {
     { title: "AI Assistant", icon: "🤖", path: "/ai-assistant", description: "Get AI-powered help", disabled: true },
     { title: "Meeting Room", icon: "📞", path: "/meeting-room", description: "Join video sessions", disabled: true },
     { title: "Profile", icon: "👤", path: "/profile", description: "Manage your profile", disabled: false },
-  ]
-
-  const upcomingSessions = [
-    { subject: "Calculus II", tutor: "Emma Wilson", time: "Today, 3:00 PM", avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786" },
-    { subject: "Chemistry", tutor: "Mark Chen", time: "Tomorrow, 1:00 PM", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e" },
-    { subject: "Literature", tutor: "Sarah Davis", time: "Wed, 2:30 PM", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80" },
   ]
 
   useEffect(() => {
@@ -74,36 +99,51 @@ export default function Dashboard() {
 
           {/* Left Column: Upcoming Sessions */}
           <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
+            <Card className="relative bg-white rounded-xl shadow-lg p-8 text-center border border-gray-200">
+              <CardContent className="space-y-4 border border-gray-300 rounded-lg p-4">
                 <CardTitle>📅 Upcoming Sessions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {upcomingSessions.map((s) => (
-                  <div
-                    key={s.subject}
-                    className="flex justify-between items-center p-4 bg-teal-50 rounded-lg"
-                  >
-                    <div className="flex gap-4 items-center">
-                      <ImageWithFallback src={s.avatar} alt={s.tutor} className="w-12 h-12 rounded-full" />
-                      <div>
-                        <p className="font-semibold">{s.subject}</p>
-                        <p className="text-sm text-gray-600">with {s.tutor}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-teal-600">{s.time}</p>
-                      <button
-                        onClick={() => navigate("/meeting-room")}
-                        className="mt-2 px-4 py-1 text-sm rounded-md bg-teal-500 text-white hover:bg-teal-600 transition"
-                      >
-                        Join
-                      </button>
-                    </div>
-                  </div>
-                ))}
+
+                {sessions.length === 0 && (
+  <div className="text-sm text-gray-500">No upcoming sessions</div>
+)}
+
+{sessions.map((s) => {
+  const scheduled = new Date(s.scheduled_at);
+
+  return (
+    <div
+      key={s.id}
+      className="flex justify-between items-center p-4 border border-emerald-300 bg-teal-50 rounded-lg"
+    >
+      <div>
+        <p className="font-semibold">
+          Session • {scheduled.toLocaleDateString()}
+        </p>
+        <p className="text-sm text-gray-600">
+          {scheduled.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </p>
+      </div>
+
+      <div className="text-right">
+        <button
+          onClick={() =>
+            navigate("/meeting-room", {
+              state: { roomId: s.room_id, meetingId: s.id },
+            })
+          }
+          className="mt-2 px-4 py-1 text-sm rounded-md bg-teal-500 text-white hover:bg-teal-600 transition"
+        >
+          Join
+        </button>
+      </div>
+    </div>
+  );
+})}
                   <button
-                    onClick={() => navigate("/messaging")}
+                    onClick={() => navigate("/messages")}
                     className="w-full border border-teal-300 text-teal-600 hover:bg-teal-50 rounded-md py-2"
                   >
                     Schedule New Session

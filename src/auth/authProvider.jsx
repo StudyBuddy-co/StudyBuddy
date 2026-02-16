@@ -29,6 +29,7 @@ export function AuthProvider({ children }) {
 
       if (data) {
         setUserProfile({
+          id: currentUser.id,
           name: data.name || currentUser.user_metadata?.firstName || "Student",
           avatar_url: data.avatar_url || "/default-avatar.png",
           email: data.email || currentUser.email || null,
@@ -63,6 +64,7 @@ export function AuthProvider({ children }) {
             if (fetchErr) console.log("Fetch after conflict error:", fetchErr)
             if (existing) {
               setUserProfile({
+                id: currentUser.id,
                 name: existing.name || currentUser.user_metadata?.firstName || "Student",
                 avatar_url: existing.avatar_url || "/default-avatar.png",
                 email: existing.email || currentUser.email || null,
@@ -73,6 +75,7 @@ export function AuthProvider({ children }) {
 
         if (newProfile) {
           setUserProfile({
+            id: currentUser.id,
             name: newProfile.name,
             avatar_url: newProfile.avatar_url,
             email: newProfile.email || currentUser.email || null,
@@ -109,7 +112,7 @@ export function AuthProvider({ children }) {
         fetchOrCreateProfile(currentUser)
       } else {
         // Logged out: reset profile
-        setUserProfile({ name: "Student", avatar_url: "/default-avatar.png", email: null })
+        setUserProfile({ id: null, name: "Student", avatar_url: "/default-avatar.png", email: null })
       }
     })
 
