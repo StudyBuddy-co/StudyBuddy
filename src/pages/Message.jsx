@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../services/supabaseClient";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/Card";
@@ -342,6 +342,20 @@ if (tutorIds?.length) {
     return () => typingChannel.unsubscribe();
   }, [selectedChat?.id]);
 
+/* -------------------- SCROLL TO BOTTOM -------------------- */
+const messagesContainerRef = useRef(null);
+
+const scrollToBottom = () => {
+  if (messagesContainerRef.current) {
+    messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+  }
+};
+
+useEffect(() => {
+  // only scroll when new messages arrive, not on page load
+  if (messages.length > 0) scrollToBottom();
+}, [messages]);
+
   /* -------------------- HANDLE CONNECT --------------------
   const handleConnect = async (tutor) => {
     if (!currentUser || !tutor) return;
@@ -383,17 +397,19 @@ const [currentMonth, setCurrentMonth] = useState(new Date());
 const generateTimeSlots = () => {
   const slots = [];
 
-  for (let hour = 9; hour <= 17; hour++) {
-    const date = new Date();
-    date.setHours(hour, 0, 0, 0);
+  for (let hour = 9; hour <= 19; hour++) {
+    for (let minute = 0; minute < 60; minute += 30) {
+      const date = new Date();
+      date.setHours(hour, minute, 0, 0);
 
-    slots.push({
-      value: `${hour.toString().padStart(2, "0")}:00`, // DB safe
-      label: date.toLocaleTimeString([], {
-        hour: "numeric",
-        minute: "2-digit",
-      }), // 1:00 PM
-    });
+      slots.push({
+        value: `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`,
+        label: date.toLocaleTimeString([], {
+          hour: "numeric",
+          minute: "2-digit",
+        }),
+      });
+    }
   }
 
   return slots;
@@ -747,8 +763,8 @@ const handleSendMessage = async () => {
           </Card>
 
           {/* Chat window */}
-          <div className="lg:col-span-2">
-            <Card className="h-full flex flex-col border-2 border-emerald-200 shadow-md">
+          <div className="lg:col-span-2 flex flex-col h-[600px] overflow-hidden shadow-md rounded-xl">
+            <Card className="h-full flex flex-col border-2 border-emerald-200">
               {tutorProfile && (
                 <div className="p-4 border-b bg-teal-400/10 flex justify-between items-center">
                   <div className="flex items-center space-x-3">
@@ -833,7 +849,8 @@ const handleSendMessage = async () => {
                 </div>
               )}
 
-              <CardContent className="flex-1 overflow-y-auto space-y-2">
+              <CardContent className="flex-1 overflow-hidden p-0">
+<div ref={messagesContainerRef} className="flex flex-col space-y-2 h-full overflow-y-auto p-4">
                 {messages.map((m) => {
                   if (m.meeting) {
                     const scheduled = new Date(m.meeting.scheduled_at);
@@ -934,6 +951,7 @@ const handleSendMessage = async () => {
                 {typingUsers.length > 0 && (
                   <div className="text-sm italic text-gray-500">{typingUsers.join(", ")} is typing...</div>
                 )}
+              </div>
               </CardContent>
 
               <div className="p-4 border-t flex gap-2 items-center">

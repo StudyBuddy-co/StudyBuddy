@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom"
 import { AuthProvider } from "./auth/authProvider";
 import { useAuth } from "./auth/useAuth";
 import { supabase } from "./services/supabaseClient";
@@ -16,6 +16,7 @@ import Profile from "./pages/Profile"
 import FindTutor from "./pages/FindTutor"
 import PublicProfile from "./pages/PublicProfile";
 import Message from "./pages/Message"
+import MeetingRoomPage from "./pages/MeetingRoom"
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth()
@@ -51,6 +52,21 @@ function openSignup() {
   setAuthMode("signup")
   setAuthOpen(true)
 }
+
+function MeetingRoomRoute() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { meeting, tutorProfile } = location.state ?? {};
+
+  return (
+    <MeetingRoomPage
+      meeting={meeting}
+      tutorProfile={tutorProfile}
+      onNavigate={(path) => navigate(`/${path}`)}
+    />
+  );
+}
+
   return (
     <AuthProvider>
       <BrowserRouter>
@@ -110,6 +126,15 @@ function openSignup() {
           />
 
 <Route path="/profile/:id" element={<PublicProfile />} />
+
+<Route
+            path="/meeting-room"
+            element={
+              <ProtectedRoute>
+                <MeetingRoomRoute />
+              </ProtectedRoute>
+            }
+          />
 
         </Routes>
 

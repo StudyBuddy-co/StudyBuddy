@@ -19,6 +19,10 @@ export default function ProfilePage() {
     major: '',
     year: '',
     location: '',
+    year_color: '',     // ← restore these
+    major_color: '',
+    school_color: '',
+    location_color: '',
     classesTaken: [],
     strengths: [],
     areasOfDevelopment: [],
@@ -32,6 +36,13 @@ export default function ProfilePage() {
   const [newTagColor, setNewTagColor] = useState('bg-teal-500');
   const navigate = useNavigate();
   const { setUserProfile } = useAuth()
+
+  const colorMap = {
+  'bg-teal-500': 'bg-teal-500',
+  'bg-cyan-500': 'bg-cyan-500',
+  'bg-purple-500': 'bg-purple-500',
+  'bg-stone-500': 'bg-stone-500',
+};
 
 const mainTags = [
   { key: 'year', defaultColor: 'bg-teal-500' },
@@ -65,6 +76,10 @@ const mainTags = [
           major: data.major || '',
           year: data.year || '',
           location: data.location || '',
+          year_color: data.year_color || '',      // ← restore these
+          major_color: data.major_color || '',
+          school_color: data.school_color || '',
+          location_color: data.location_color || '',
           classesTaken: data.classesTaken || [],
           strengths: data.areasOfStrength || [],
           areasOfDevelopment: data.areasOfDevelopment || [],
@@ -114,6 +129,10 @@ const mainTags = [
       major: profile.major,
       year: profile.year,
       location: profile.location,
+      year_color: profile.year_color,         // ← restore these
+      major_color: profile.major_color,
+      school_color: profile.school_color,
+      location_color: profile.location_color,
       classesTaken: profile.classesTaken,
       areasOfStrength: profile.strengths, // note the different key name in the database, strengths -> areasOfStrength
       areasOfDevelopment: profile.areasOfDevelopment,
@@ -207,7 +226,9 @@ const mainTags = [
     return value ? (
       <Badge
         key={tag.key}
-        className={`px-3 py-1 font-bold text-white ${profile[`${tag.key}_color`] || tag.defaultColor}`}
+        className={`px-3 py-1 font-bold text-white ${
+          colorMap[profile[`${tag.key}_color`]] || colorMap[tag.defaultColor]
+        }`}
       >
         {value}
         {isEditing && (

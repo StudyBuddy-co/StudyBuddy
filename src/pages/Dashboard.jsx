@@ -11,12 +11,15 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const { userProfile, setUserProfile } = useAuth()
   const [sessions, setSessions] = useState([]);
+const [participants, setParticipants] = useState({}); // Map: userId -> profile
+
 useEffect(() => {
   if (!userProfile?.id) return;
 
   const fetchMeetings = async () => {
     const now = new Date().toISOString();
 
+    // 1️⃣ Fetch upcoming meetings with conversation
     const { data, error } = await supabase
       .from("meetings")
       .select(`
@@ -28,13 +31,42 @@ useEffect(() => {
       `)
       .or(`created_by.eq.${userProfile.id},participant_id.eq.${userProfile.id}`)
       .in("status", ["pending", "confirmed"])
-      .gt("scheduled_at", now)    // upcoming only
+      .gt("scheduled_at", now)
       .order("scheduled_at", { ascending: true })
       .limit(3);
 
-    if (error) return;
+    if (error) {
+      console.error(error);
+      return;
+    }
 
     setSessions(data ?? []);
+
+    // 2️⃣ Collect all other user IDs
+    const otherUserIds = data
+      ?.map((m) => m.conversation.user_ids.find((id) => id !== userProfile.id))
+      .filter(Boolean);
+
+    if (!otherUserIds?.length) return;
+
+    // 3️⃣ Fetch profiles for all other users
+    const { data: profiles, error: profileError } = await supabase
+      .from("profile")
+      .select("id, name, avatar_url")
+      .in("id", otherUserIds);
+
+    if (profileError) {
+      console.error(profileError);
+      return;
+    }
+
+    // 4️⃣ Create a map of userId -> profile
+    const profileMap = {};
+    profiles?.forEach((p) => {
+      profileMap[p.id] = p;
+    });
+
+    setParticipants(profileMap);
   };
 
   fetchMeetings();
@@ -45,7 +77,7 @@ useEffect(() => {
     { title: "Messages", icon: "💬", path: "/messages", description: "Chat with your tutors", disabled: false },
     { title: "Resources", icon: "📚", path: "/resources", description: "Access study materials", disabled: true },
     { title: "AI Assistant", icon: "🤖", path: "/ai-assistant", description: "Get AI-powered help", disabled: true },
-    { title: "Meeting Room", icon: "📞", path: "/meeting-room", description: "Join video sessions", disabled: true },
+    { title: "Meeting Room", icon: "📞", path: "/meeting-room", description: "Join video sessions", disabled: false },
     { title: "Profile", icon: "👤", path: "/profile", description: "Manage your profile", disabled: false },
   ]
 
@@ -71,7 +103,7 @@ useEffect(() => {
         </div>
 
         {/* Quick Actions */}
-        <div className="bg-white rounded-xl shadow-lg p-8 text-center relative opacity-60 cursor-not-allowed">
+        <div className="bg-white rounded-xl shadow-lg p-8 text-center relative">
           <h2 className="text-2xl font-bold mb-6">Quick Actions</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {quickActions.map((action) => (
@@ -109,6 +141,9 @@ useEffect(() => {
 
 {sessions.map((s) => {
   const scheduled = new Date(s.scheduled_at);
+  // Get the other participant
+  const otherUserId = s.conversation.user_ids.find((id) => id !== userProfile.id);
+  const otherUser = participants[otherUserId];
 
   return (
     <div
@@ -117,7 +152,7 @@ useEffect(() => {
     >
       <div>
         <p className="font-semibold">
-          Session • {scheduled.toLocaleDateString()}
+          {otherUser?.name || "Tutor"} • {scheduled.toLocaleDateString()}
         </p>
         <p className="text-sm text-gray-600">
           {scheduled.toLocaleTimeString([], {
@@ -129,15 +164,18 @@ useEffect(() => {
 
       <div className="text-right">
         <button
-          onClick={() =>
-            navigate("/meeting-room", {
-              state: { roomId: s.room_id, meetingId: s.id },
-            })
-          }
-          className="mt-2 px-4 py-1 text-sm rounded-md bg-teal-500 text-white hover:bg-teal-600 transition"
-        >
-          Join
-        </button>
+  onClick={() =>
+    navigate("/meeting-room", {
+      state: {
+        meeting: s,           // 's' is the session/meeting object
+        tutorProfile: otherUser  // already derived above in the map
+      },
+    })
+  }
+  className="mt-2 px-4 py-1 text-sm rounded-md bg-teal-500 text-white hover:bg-teal-600 transition"
+>
+  Join
+</button>
       </div>
     </div>
   );
