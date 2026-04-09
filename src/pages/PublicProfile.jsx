@@ -44,7 +44,7 @@ export default function TutorProfilePage() {
         <CardHeader className="text-center space-y-4 pb-4">
           <div className="flex justify-center">
             <ImageWithFallback
-              src={tutor.avatar_url || "/default-avatar.png"}
+              src={tutor.avatar_url || "/StudyBuddy/default-avatar.svg"}
               alt={tutor.name}
               className="w-24 h-24 rounded-full object-cover ring-4 ring-teal-200"
             />

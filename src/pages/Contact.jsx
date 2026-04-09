@@ -16,6 +16,9 @@ export default function ContactPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
+useEffect(() => {
+  console.log("EDGE SECRET:", import.meta.env.VITE_EDGE_SECRET);
+}, []);
 
 async function handleSubmit(e) {
   e.preventDefault();
@@ -41,16 +44,16 @@ async function handleSubmit(e) {
 
     // send to your edge function, which handles Notion & supabase
     const response = await fetch(
-      "https://rbzmkkmqigutdkwtidbl.functions.supabase.co/contact-to-notion",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${EDGE_SECRET}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ record: formData }),
-      }
-    );
+  "https://rbzmkkmqigutdkwtidbl.functions.supabase.co/contact-to-notion",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+      //"Authorization": `Bearer ${import.meta.env.VITE_EDGE_SECRET}`,
+    },
+    body: JSON.stringify({ record: formData }),
+  }
+);
 
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Failed to submit form");

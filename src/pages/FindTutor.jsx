@@ -351,7 +351,7 @@ useEffect(() => {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-start space-x-3">
                     <div className="relative">
-                      <ImageWithFallback src={tutor.avatar_url || "/default-avatar.png"} alt={tutor.name} className="w-16 h-16 rounded-full object-cover" />
+                      <ImageWithFallback src={tutor.avatar_url || "/StudyBuddy/default-avatar.svg"} alt={tutor.name} className="w-16 h-16 rounded-full object-cover" />
 
                     </div>
                     <div className="flex-1">

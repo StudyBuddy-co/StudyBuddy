@@ -6,7 +6,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [userProfile, setUserProfile] = useState({
     name: "Student",
-    avatar_url: "/default-avatar.png",
+    avatar_url: "/StudyBuddy/default-avatar.svg",
     email: null,
   })
   const [loading, setLoading] = useState(true)
@@ -16,7 +16,7 @@ export function AuthProvider({ children }) {
     if (!currentUser) return
 
     // Reset to defaults immediately
-    setUserProfile({ name: "Student", avatar_url: "/default-avatar.png" })
+    setUserProfile({ name: "Student", avatar_url: "/StudyBuddy/default-avatar.svg" })
 
     try {
       const { data, error } = await supabase
@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
         setUserProfile({
           id: currentUser.id,
           name: data.name || currentUser.user_metadata?.firstName || "Student",
-          avatar_url: data.avatar_url || "/default-avatar.png",
+          avatar_url: data.avatar_url || "/StudyBuddy/default-avatar.svg",
           email: data.email || currentUser.email || null,
         })
       } else {
@@ -39,7 +39,7 @@ export function AuthProvider({ children }) {
         const profileRow = {
           id: currentUser.id,
           name: currentUser.user_metadata?.firstName || "Student",
-          avatar_url: "/default-avatar.png",
+          avatar_url: "/StudyBuddy/default-avatar.svg",
           email: currentUser.email || null,
         }
 
@@ -66,7 +66,7 @@ export function AuthProvider({ children }) {
               setUserProfile({
                 id: currentUser.id,
                 name: existing.name || currentUser.user_metadata?.firstName || "Student",
-                avatar_url: existing.avatar_url || "/default-avatar.png",
+                avatar_url: existing.avatar_url || "/StudyBuddy/default-avatar.svg",
                 email: existing.email || currentUser.email || null,
               })
             }
@@ -112,7 +112,7 @@ export function AuthProvider({ children }) {
         fetchOrCreateProfile(currentUser)
       } else {
         // Logged out: reset profile
-        setUserProfile({ id: null, name: "Student", avatar_url: "/default-avatar.png", email: null })
+        setUserProfile({ id: null, name: "Student", avatar_url: "/StudyBuddy/default-avatar.svg", email: null })
       }
     })
 

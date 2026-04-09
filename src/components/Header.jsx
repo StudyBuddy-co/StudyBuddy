@@ -117,7 +117,7 @@ export function Header() {
                   className="flex items-center gap-2 text-white hover:text-yellow-200 transition"
                 >
                   <img
-                    src={userProfile.avatar_url || "/default-avatar.png"}
+                    src={userProfile.avatar_url || "/StudyBuddy/default-avatar.svg"}
                     alt="User avatar"
                     className="w-8 h-8 rounded-full object-cover border border-white"
                   />

@@ -189,7 +189,10 @@ const mainTags = [
       {/* Avatar with Upload */}
       <div className="flex flex-col items-center gap-2">
         <img
-          src={profile.avatar_url || "/default-avatar.png"}
+          src={
+  profile.avatar_url ||
+  `${import.meta.env.BASE_URL}default-avatar.svg`
+}
           alt={profile.name}
           className="w-24 h-24 rounded-full object-cover border"
         />

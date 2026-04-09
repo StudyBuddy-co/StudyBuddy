@@ -69,7 +69,7 @@ function MeetingRoomRoute() {
 
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter basename="/StudyBuddy/">
         <Header
           authOpen={authOpen}
           setAuthOpen={setAuthOpen}

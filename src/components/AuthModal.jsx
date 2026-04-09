@@ -43,7 +43,7 @@ const navigate = useNavigate();
                 id: signUpData.user.id,
                 email: signUpData.user.email,
                 name: displayName,
-                avatar_url: "/default-avatar.png",
+                avatar_url: "/StudyBuddy/default-avatar.svg",
               },
             ],
             { onConflict: "id" }

@@ -743,7 +743,7 @@ const handleSendMessage = async () => {
                   >
                     <div className="flex items-center space-x-3">
                       <ImageWithFallback
-                          src={conversationTutors[tutorId]?.avatar_url || `/avatars/${tutorId}.png`}
+src={`${import.meta.env.BASE_URL}default-avatar.svg`} width={40} height={40}
                           alt="Tutor"
                           className="w-10 h-10 rounded-full"
                         />

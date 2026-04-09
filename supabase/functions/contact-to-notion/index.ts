@@ -12,27 +12,27 @@ const EDGE_SECRET = Deno.env.get("EDGE_SECRET")!;
 
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
-  "https://your-production-site.com",
+  "http://localhost:4173",
 ];
 
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin") || "";
 
-  const CORS_HEADERS = {
-    "Access-Control-Allow-Origin": ALLOWED_ORIGINS.includes(origin) ? origin : "http://localhost:5173",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Authorization, Content-Type",
-  };
+    const allowedOrigin = ALLOWED_ORIGINS.includes(origin)
+  ? origin
+  : "https://studybuddy-co.github.io"; // safer fallback
+
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": allowedOrigin,
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Authorization, Content-Type",
+};
 
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
   }
 
   try {
-    const auth = req.headers.get("authorization");
-    if (!auth || auth !== `Bearer ${EDGE_SECRET}`) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: CORS_HEADERS });
-    }
 
     const payload = await req.json();
     const record = payload.record;
