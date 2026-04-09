@@ -94,6 +94,13 @@ export function AuthProvider({ children }) {
         data: { session },
       } = await supabase.auth.getSession()
 
+      // 🔥 FIX: handle broken/expired sessions
+  if (!session) {
+    setUser(null)
+    setLoading(false)
+    return
+  }
+
       const currentUser = session?.user ?? null
       setUser(currentUser)
 

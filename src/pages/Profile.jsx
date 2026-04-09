@@ -391,7 +391,7 @@ const mainTags = [
                     </p>
                   </div>
                   <Button
-                    onClick={() => navigate('findtutors')}
+                    onClick={() => navigate('findtutor')}
                     className="bg-gradient-to-r from-purple-500 to-pink-500 text-white"
                   >
                     View Matches
