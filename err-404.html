@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <script>
-      // Redirect all 404s to index.html
-      location.replace("/StudyBuddy/");
+      var path = window.location.pathname.replace("/StudyBuddy", "");
+      window.location.replace("/StudyBuddy/#" + path);
     </script>
   </head>
   <body></body>
