@@ -34,6 +34,8 @@ export default function ProfilePage() {
   const [newArea, setNewArea] = useState('');
   const [newTagText, setNewTagText] = useState('');
   const [newTagColor, setNewTagColor] = useState('bg-teal-500');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showSaveHint, setShowSaveHint] = useState(false);
   const navigate = useNavigate();
   const { setUserProfile } = useAuth()
 
@@ -160,11 +162,37 @@ const mainTags = [
   const addItem = (key, value, setValue) => {
     if (!value.trim()) return;
     setProfile({ ...profile, [key]: [...profile[key], value.trim()] });
+    setHasUnsavedChanges(true);
     setValue('');
   };
 
   const removeItem = (key, index) => {
     setProfile({ ...profile, [key]: profile[key].filter((_, i) => i !== index) });
+    setHasUnsavedChanges(true);
+  };
+
+  const handleProfileFieldChange = (updates) => {
+    setProfile((prev) => ({ ...prev, ...updates }));
+    setHasUnsavedChanges(true);
+  };
+
+  const scrollToSave = () => {
+    const target = document.getElementById('profile-save-button');
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target.focus({ preventScroll: true });
+    }
+  };
+
+  const handleViewMatches = () => {
+    if (hasUnsavedChanges) {
+      setShowSaveHint(true);
+      scrollToSave();
+      return;
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    navigate('/findtutor');
   };
 
   if (loading) return <p>Loading...</p>;
@@ -210,7 +238,7 @@ const mainTags = [
       <div className="flex-1 min-w-0">
         <Input
           value={profile.name}
-          onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+          onChange={(e) => handleProfileFieldChange({ name: e.target.value })}
           disabled={!isEditing}
           className="text-gray-900 font-semibold text-2xl w-full"
           placeholder="Your name"
@@ -278,6 +306,7 @@ const mainTags = [
             [emptyTag.key]: newTagText.trim(),
             [`${emptyTag.key}_color`]: newTagColor
           });
+          setHasUnsavedChanges(true);
           setNewTagText('');
         }
       }}
@@ -290,9 +319,15 @@ const mainTags = [
 
       {/* Edit / Save Button */}
       <Button
+        id="profile-save-button"
         onClick={() => {
-          if (isEditing) saveProfile();
-          else setIsEditing(true);
+          if (isEditing) {
+            saveProfile();
+            setHasUnsavedChanges(false);
+            setShowSaveHint(false);
+          } else {
+            setIsEditing(true);
+          }
         }}
         className={isEditing ? "border-gray-300" : "bg-gradient-to-r from-teal-500 to-cyan-500 text-white"}
       >
@@ -311,7 +346,7 @@ const mainTags = [
             {isEditing ? (
               <Textarea
                 value={profile.bio}
-                onChange={e => setProfile({ ...profile, bio: e.target.value })}
+                onChange={e => handleProfileFieldChange({ bio: e.target.value })}
                 rows={4}
                 placeholder="Tell us about yourself..."
               />
@@ -390,12 +425,21 @@ const mainTags = [
                       You'll be paired with peer tutors based on complementary skills. For example, if you're strong in <span className="font-semibold">{profile.strengths[0]}</span> and need help in <span className="font-semibold">{profile.areasOfDevelopment[0]}</span>, we'll match you with students who excel in {profile.areasOfDevelopment[0]} and need support in {profile.strengths[0]}.
                     </p>
                   </div>
-                  <Button
-                    onClick={() => navigate('findtutor')}
-                    className="bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                  >
-                    View Matches
-                  </Button>
+                  <div className="flex flex-col items-end gap-2">
+                    {showSaveHint && (
+                      <p className="text-xs text-purple-700 font-medium">
+                        Save your changes first, then try again.
+                      </p>
+                    )}
+                    <Button
+                      onClick={handleViewMatches}
+                      disabled={hasUnsavedChanges}
+                      title={hasUnsavedChanges ? "Save your changes first" : "View your matches"}
+                      className={`bg-gradient-to-r from-purple-500 to-pink-500 text-white ${hasUnsavedChanges ? "opacity-60 cursor-not-allowed" : ""}`}
+                    >
+                      View Matches
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

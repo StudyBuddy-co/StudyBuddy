@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom"
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom"
 import { AuthProvider } from "./auth/authProvider";
 import { useAuth } from "./auth/useAuth";
 import { supabase } from "./services/supabaseClient";
+import { HashRouter } from "react-router-dom"
 
 import { Header } from "./components/Header"
 import { Footer } from "./components/Footer"
@@ -19,7 +20,10 @@ import Message from "./pages/Message"
 import MeetingRoomPage from "./pages/MeetingRoom"
 
 function ProtectedRoute({ children }) {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
+
+  if (loading) return null
+
   return user ? children : <Navigate to="/" replace />
 }
 
@@ -69,7 +73,7 @@ function MeetingRoomRoute() {
 
   return (
     <AuthProvider>
-      <BrowserRouter basename="/StudyBuddy/">
+      <HashRouter>
         <Header
           authOpen={authOpen}
           setAuthOpen={setAuthOpen}
@@ -125,7 +129,7 @@ function MeetingRoomRoute() {
             }
           />
 
-<Route path="/profile/:id" element={<PublicProfile />} />
+<Route path="/tutor/:id" element={<PublicProfile />} />
 
 <Route
             path="/meeting-room"
@@ -139,7 +143,7 @@ function MeetingRoomRoute() {
         </Routes>
 
         <Footer />
-      </BrowserRouter>
+      </HashRouter>
     </AuthProvider>
   )
 }

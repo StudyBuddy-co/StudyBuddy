@@ -6,6 +6,7 @@ import { Button } from "../components/Button";
 import { Badge } from "../components/Badge";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { useNavigate } from "react-router-dom";
+import { calculateMatchScore } from "../utils/matching";
 
 export default function TutorConnectPage({ tutors }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -80,44 +81,6 @@ useEffect(() => {
     // -------------------------------
   // MATCHING ALGORITHM
   // -------------------------------
-  const calculateMatchScore = (user, tutor) => {
-  if (!user) return 0;
-
-  const userStrengths = user.areasOfStrength || [];
-  const userNeeds = user.areasOfDevelopment || [];
-
-  const tutorStrengths = tutor.areasOfStrength || [];
-  const tutorNeeds = tutor.areasOfDevelopment || [];
-
-  // Tutor helps user
-  const tutorHelpsUser = tutorStrengths.filter(s =>
-    userNeeds.includes(s)
-  ).length;
-
-  // User helps tutor
-  const userHelpsTutor = tutorNeeds.filter(n =>
-    userStrengths.includes(n)
-  ).length;
-
-  // No mutual value → no match
-  if (tutorHelpsUser === 0 && userHelpsTutor === 0) {
-    return 0;
-  }
-
-  const tutorHelpScore =
-    tutorHelpsUser / Math.max(userNeeds.length, 1);
-
-  const userHelpScore =
-    userHelpsTutor / Math.max(tutorNeeds.length, 1);
-
-  // Weight helping YOU higher than helping THEM
-  const weightedScore =
-    tutorHelpScore * 0.65 +
-    userHelpScore * 0.35;
-
-  return Math.round(weightedScore * 100);
-};
-
     // -------------------------------
   // FETCH DATA FROM SUPABASE
   // -------------------------------
@@ -419,7 +382,7 @@ useEffect(() => {
                 </div>
 
                 <div className="flex space-x-2 pt-4 border-t border-stone-200">
-                  <button onClick={() => navigate(`/profile/${tutor.id}`)} className="flex-1 border rounded-md border-teal-300 text-teal-600 hover:bg-teal-50">View Profile</button>
+                  <button onClick={() => navigate(`/tutor/${tutor.id}`)} className="flex-1 border rounded-md border-teal-300 text-teal-600 hover:bg-teal-50">View Profile</button>
                   <Button
                     onClick={() => handleConnect(tutor)}
                     className="flex-1 bg-gradient-to-r from-teal-500 to-cyan-500 text-white"
