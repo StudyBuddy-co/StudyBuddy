@@ -5,26 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/Card";
 import { Input } from "../components/Input";
 import { Button } from "../components/Button";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
+import { calculateMatchScore } from "../utils/matching";
 // import dayjs from "dayjs";
 
 /* -------------------- MATCH SCORE -------------------- */
-const calculateMatchScore = (user, tutor) => {
-  if (!user || !tutor) return 0;
-  const userStrengths = user.areasOfStrength || [];
-  const userNeeds = user.areasOfDevelopment || [];
-  const tutorStrengths = tutor.areasOfStrength || [];
-  const tutorNeeds = tutor.areasOfDevelopment || [];
-
-  const tutorHelpsUser = tutorStrengths.filter((s) => userNeeds.includes(s)).length;
-  const userHelpsTutor = tutorNeeds.filter((n) => userStrengths.includes(n)).length;
-
-  if (!tutorHelpsUser && !userHelpsTutor) return 0;
-
-  return Math.round(
-    (tutorHelpsUser / Math.max(userNeeds.length, 1)) * 65 +
-      (userHelpsTutor / Math.max(tutorNeeds.length, 1)) * 35
-  );
-};
 
 export default function MessagesPage() {
   const navigate = useNavigate();
@@ -57,37 +41,29 @@ export default function MessagesPage() {
   }, []);
 
   /* -------------------- ONLINE STATUS -------------------- */
-  /*useEffect(() => {
+useEffect(() => {
   if (!currentUser?.id) return;
 
-  supabase
-    .from("profile")
-    .update({ online: true })
-    .eq("id", currentUser.id);
-
-  return () => {
-    supabase
-      .from("profile")
-      .update({ online: false })
+  const beat = () => {
+    supabase.from("profile")
+      .update({ online: true, last_seen: new Date().toISOString() })
       .eq("id", currentUser.id);
   };
-}, [currentUser]);*/
 
-  /* -------------------- HANDLE TAB CLOSE -------------------- */
-
-/*useEffect(() => {
-  if (!currentUser?.id) return;
+  beat(); // immediately on mount
+  const interval = setInterval(beat, 15_000); // every 15s
 
   const handleUnload = () => {
-    supabase
-      .from("profile")
-      .update({ online: false })
-      .eq("id", currentUser.id);
+    supabase.from("profile").update({ online: false }).eq("id", currentUser.id);
   };
-
   window.addEventListener("beforeunload", handleUnload);
-  return () => window.removeEventListener("beforeunload", handleUnload);
-}, [currentUser]);*/
+
+  return () => {
+    clearInterval(interval);
+    window.removeEventListener("beforeunload", handleUnload);
+    supabase.from("profile").update({ online: false }).eq("id", currentUser.id);
+  };
+}, [currentUser?.id]);
 
   /* -------------------- TUTOR ONLINE STATUS SUBSCRIPTION -------------------- */
 useEffect(() => {
@@ -398,7 +374,7 @@ const generateTimeSlots = () => {
   const slots = [];
 
   for (let hour = 9; hour < 24; hour++) {
-    for (let minute = 0; minute < 60; minute += 30) {
+    for (let minute = 0; minute < 60; minute += 5) {
       const date = new Date();
       date.setHours(hour, minute, 0, 0);
 
@@ -743,10 +719,11 @@ const handleSendMessage = async () => {
                   >
                     <div className="flex items-center space-x-3">
                       <ImageWithFallback
-src={`${import.meta.env.BASE_URL}default-avatar.svg`} width={40} height={40}
-                          alt="Tutor"
-                          className="w-10 h-10 rounded-full"
-                        />
+  src={conversationTutors[tutorId]?.avatar_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
+  width={40} height={40}
+  alt={conversationTutors[tutorId]?.name || "Tutor"}
+  className="w-10 h-10 rounded-full object-cover"
+/>
                       <div>
                         <h4 className="font-semibold">
                           {conversationTutors[tutorId]?.name || "Peer Tutor"}
@@ -937,15 +914,21 @@ src={`${import.meta.env.BASE_URL}default-avatar.svg`} width={40} height={40}
                   }
                   // Normal message
                   return (
-                    <div key={m.id + (m.sender_id || "")} className={`flex ${m.sender_id === currentUser?.id ? "justify-end" : "justify-start"}`}>
-                      <div className=" bg-stone-600/10 text-gray-900 px-4 py-2 rounded-xl bg-stone-100 relative">
-                        <p>{m.message}</p>
-                        <span className="text-xs text-gray-500 absolute bottom-0 right-1">
-                          {m.sender_id === currentUser?.id && <span className="ml-1">{m.read ? "✓✓" : "✓"}</span>}
-                        </span>
-                      </div>
-                    </div>
-                  );
+  <div key={m.id + (m.sender_id || "")} className={`flex ${m.sender_id === currentUser?.id ? "justify-end" : "justify-start"}`}>
+    <div className={`px-4 py-2 rounded-xl relative max-w-xs ${
+      m.sender_id === currentUser?.id
+        ? "bg-teal-500 text-white"
+        : "bg-gray-200 text-gray-900"
+    }`}>
+      <p>{m.message}</p>
+      <span className={`text-xs absolute bottom-0 right-1 ${
+        m.sender_id === currentUser?.id ? "text-teal-100" : "text-gray-500"
+      }`}>
+        {m.sender_id === currentUser?.id && <span className="ml-1">{m.read ? "✓✓" : "✓"}</span>}
+      </span>
+    </div>
+  </div>
+);
                 })}
 
                 {typingUsers.length > 0 && (
