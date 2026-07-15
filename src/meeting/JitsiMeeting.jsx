@@ -1,3 +1,6 @@
+/* will be removed! along with any other jitsi packages and code
+the project switched to livekit for video calls */
+
 import { useEffect, useRef } from "react";
 
 export function JitsiMeeting({ roomName, displayName, onEndCall }) {

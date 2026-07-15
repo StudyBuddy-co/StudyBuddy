@@ -1,15 +1,20 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "../components/Card";
 import { Button } from "../components/Button";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/Avatar";
 import { Badge } from "../components/Badge";
+import { supabase } from "../services/supabaseClient";
+import { LiveKitRoom, VideoConference } from "@livekit/components-react";
+import "@livekit/components-styles";
 
-export default function MeetingRoomPage({ meeting, tutorProfile, onNavigate }) {
-  const jitsiContainerRef = useRef(null);
-  const [jitsiApi, setJitsiApi] = useState(null);
+const LIVEKIT_URL = "wss://studybuddy-qzk49g48.livekit.cloud"; // ⬅️ replace with your LiveKit WS URL
+
+export default function MeetingRoomPage({ meeting, tutorProfile, currentUser, onNavigate }) {
   const [canJoin, setCanJoin] = useState(false);
   const [timeUntil, setTimeUntil] = useState(null);
   const [hasJoined, setHasJoined] = useState(false);
+  const [livekitToken, setLivekitToken] = useState(null);
+  const [tokenError, setTokenError] = useState(null);
 
   // --- Check if within 10 minutes of meeting start ---
   useEffect(() => {
@@ -17,84 +22,64 @@ export default function MeetingRoomPage({ meeting, tutorProfile, onNavigate }) {
       if (!meeting?.scheduled_at) return;
       const now = Date.now();
       const start = new Date(meeting.scheduled_at).getTime();
-      const diff = start - now; // ms until meeting
+      const diff = start - now;
       const diffMins = Math.floor(diff / 60000);
 
       if (diff <= 10 * 60 * 1000 && diff > -60 * 60 * 1000) {
-        // Within 10 mins before OR up to 1 hour after start
         setCanJoin(true);
         setTimeUntil(null);
       } else if (diff > 0) {
         setCanJoin(false);
         setTimeUntil(diffMins);
       } else {
-        // Meeting time has passed by more than 1 hour
         setCanJoin(false);
         setTimeUntil(null);
       }
     };
 
     check();
-    const interval = setInterval(check, 30000); // re-check every 30s
+    const interval = setInterval(check, 30000);
     return () => clearInterval(interval);
   }, [meeting?.scheduled_at]);
 
-  // --- Start Jitsi ---
-  function startJitsi() {
-    if (!jitsiContainerRef.current || !meeting?.room_id) return;
+  // --- Fetch LiveKit token once the user clicks Join ---
+useEffect(() => {
+  if (!hasJoined || !meeting?.room_id || !currentUser?.id) return;
 
-    const domain = "meet.jit.si";
-    const options = {
-      roomName: `studybuddy-${meeting.room_id}`,
-      parentNode: jitsiContainerRef.current,
-      width: "100%",
-      height: 500,
-      interfaceConfigOverwrite: {
-        SHOW_JITSI_WATERMARK: false,
-        DEFAULT_BACKGROUND: "#f0fdfa",
-        SHOW_CHROME_EXTENSION_BANNER: false,
-        TOOLBAR_BUTTONS: [
-          "microphone", "camera", "chat",
-          "desktop", "hangup", "raisehand", "tileview",
-        ],
-      },
-      configOverwrite: {
-        startWithAudioMuted: false,
-        startWithVideoMuted: false,
-      },
-    };
+  let cancelled = false;
 
-    const api = new window.JitsiMeetExternalAPI(domain, options);
-    api.addEventListener("videoConferenceJoined", () => {
-      console.log("Joined Jitsi Meeting");
+  supabase.functions
+    .invoke("livekit-token", {
+      body: {
+        roomName: `studybuddy-${meeting.room_id}`,
+        identity: currentUser.id,
+        name: currentUser.name,
+      },
+    })
+    .then(({ data, error }) => {
+      if (cancelled) return;
+      if (error) {
+        console.error("Token fetch failed:", error);
+        setTokenError("Couldn't connect to the meeting. Please try again.");
+        return;
+      }
+      setTokenError(null);
+      setLivekitToken(data.token);
+    })
+    .catch((err) => {
+      if (cancelled) return;
+      console.error("Token fetch failed:", err);
+      setTokenError("Couldn't connect to the meeting. Please try again.");
     });
-    setJitsiApi(api);
-  }
 
-  // --- Load Jitsi only after user clicks Join ---
-  useEffect(() => {
-    if (!hasJoined) return;
+  return () => {
+    cancelled = true;
+  };
+}, [hasJoined, meeting?.room_id, currentUser?.id]);
 
-    if (!window.JitsiMeetExternalAPI) {
-      const script = document.createElement("script");
-      script.src = "https://meet.jit.si/external_api.js";
-      script.async = true;
-      document.body.appendChild(script);
-      script.onload = () => startJitsi();
-    } else {
-      startJitsi();
-    }
-
-    return () => {
-      if (jitsiApi) jitsiApi.dispose();
-    };
-  }, [hasJoined]);
-
-  // --- End session: dispose Jitsi but do NOT change meeting status ---
   const handleEndCall = () => {
-    if (jitsiApi) jitsiApi.dispose();
-    setJitsiApi(null);
     setHasJoined(false);
+    setLivekitToken(null);
     onNavigate("messages");
   };
 
@@ -188,10 +173,7 @@ export default function MeetingRoomPage({ meeting, tutorProfile, onNavigate }) {
           <CardContent className="p-6 flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Avatar className="w-12 h-12">
-                <AvatarImage
-                  src={tutorProfile?.avatar_url}
-                  alt={tutorProfile?.name}
-                />
+                <AvatarImage src={tutorProfile?.avatar_url} alt={tutorProfile?.name} />
                 <AvatarFallback>{tutorProfile?.name?.charAt(0) ?? "P"}</AvatarFallback>
               </Avatar>
               <div>
@@ -213,13 +195,34 @@ export default function MeetingRoomPage({ meeting, tutorProfile, onNavigate }) {
           </CardContent>
         </Card>
 
-        {/* Jitsi Video Area */}
+        {/* LiveKit Video Area */}
         <Card className="border-stone-200 shadow-lg">
           <CardContent className="p-4">
-            <div
-              ref={jitsiContainerRef}
-              className="rounded-xl border border-gray-200 shadow-lg overflow-hidden w-full h-[500px]"
-            />
+            <div className="rounded-xl border border-gray-200 shadow-lg overflow-hidden w-full h-[500px]">
+              {tokenError && (
+                <div className="flex items-center justify-center h-full text-red-600">
+                  {tokenError}
+                </div>
+              )}
+              {!tokenError && !livekitToken && (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  Connecting to your session…
+                </div>
+              )}
+              {livekitToken && (
+                <LiveKitRoom
+                  token={livekitToken}
+                  serverUrl={LIVEKIT_URL}
+                  connect={true}
+                  video={true}
+                  audio={true}
+                  onDisconnected={handleEndCall}
+                  style={{ height: "100%" }}
+                >
+                  <VideoConference />
+                </LiveKitRoom>
+              )}
+            </div>
           </CardContent>
         </Card>
 

@@ -40,31 +40,6 @@ export default function MessagesPage() {
     });
   }, []);
 
-  /* -------------------- ONLINE STATUS -------------------- */
-useEffect(() => {
-  if (!currentUser?.id) return;
-
-  const beat = () => {
-    supabase.from("profile")
-      .update({ online: true, last_seen: new Date().toISOString() })
-      .eq("id", currentUser.id);
-  };
-
-  beat(); // immediately on mount
-  const interval = setInterval(beat, 15_000); // every 15s
-
-  const handleUnload = () => {
-    supabase.from("profile").update({ online: false }).eq("id", currentUser.id);
-  };
-  window.addEventListener("beforeunload", handleUnload);
-
-  return () => {
-    clearInterval(interval);
-    window.removeEventListener("beforeunload", handleUnload);
-    supabase.from("profile").update({ online: false }).eq("id", currentUser.id);
-  };
-}, [currentUser?.id]);
-
   /* -------------------- TUTOR ONLINE STATUS SUBSCRIPTION -------------------- */
 useEffect(() => {
   if (!tutorProfile?.id) return;

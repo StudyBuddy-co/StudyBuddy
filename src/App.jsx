@@ -32,6 +32,8 @@ const { user } = useAuth()
 const [authOpen, setAuthOpen] = useState(false)
 const [authMode, setAuthMode] = useState("signup")
 
+/* online status - heartbeats */
+
 useEffect(() => {
   if (!user?.id) return;
 
@@ -45,8 +47,8 @@ useEffect(() => {
   // update immediately on load
   updateLastSeen();
 
-  // heartbeat every 15 seconds
-  const interval = setInterval(updateLastSeen, 15000);
+  // heartbeat every 30 seconds
+  const interval = setInterval(updateLastSeen, 30000);
 
   return () => clearInterval(interval);
 }, [user]);
@@ -60,12 +62,14 @@ function openSignup() {
 function MeetingRoomRoute() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
   const { meeting, tutorProfile } = location.state ?? {};
 
   return (
     <MeetingRoomPage
       meeting={meeting}
       tutorProfile={tutorProfile}
+      currentUser={userProfile}
       onNavigate={(path) => navigate(`/${path}`)}
     />
   );
