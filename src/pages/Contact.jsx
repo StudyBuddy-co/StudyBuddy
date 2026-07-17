@@ -86,7 +86,7 @@ async function handleSubmit(e) {
         </h1>
         <div className="w-32 h-2 bg-gradient-to-r from-teal-400 to-cyan-400 rounded-full mx-auto mt-4" />
         <p className="mt-6 text-xl text-gray-700 max-w-3xl mx-auto">
-          Have questions? Need support? Want to join our tutor network? We'd love to hear from you!
+          Have questions? Need support? We'd love to hear from you!
         </p>
       </section>
 
@@ -164,8 +164,7 @@ async function handleSubmit(e) {
           <div className="bg-white rounded-xl shadow-lg p-8 text-center">
             <div className="text-4xl mb-4">📧</div>
             <h3 className="text-xl font-bold text-gray-800">Email Us</h3>
-            <p className="text-teal-600 mt-2">hello@studybuddy.com</p>
-            <p className="text-teal-600">support@studybuddy.com</p>
+            <p className="text-teal-600 mt-2">Studybuddymailing@gmail.com</p>
           </div>
 
           <div className="bg-white rounded-xl shadow-lg p-8 text-center relative opacity-60 cursor-not-allowed">

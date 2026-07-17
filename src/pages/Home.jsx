@@ -18,7 +18,7 @@ export default function Home({ openSignup }) {
             </div>
 
             <p className="text-lg text-gray-700 leading-relaxed max-w-2xl">
-              Your one-stop shop for all your study needs! 📚 We offer a wide range of services to help you succeed in your studies. Whether you need help with a particular subject or you need help with your study skills, we have you covered. Our team of experts are here to help you every step of the way. So why wait? Get started today! 🚀
+              The one stop shop for all your study needs! 📚 We offer a wide range of services to help you succeed in your studies. Whether you need help with a particular subject or you need help with your study skills, we are here to help. The purpose of this is to connect you with peers for mutual mentorship: people who can learn from your strengths just as much as you can learn from theirs. Build real connections, grow together, and get all your resources in one place. So why wait? Get started today! 🚀
             </p>
 
             <div className="flex flex-wrap gap-4 pt-4">

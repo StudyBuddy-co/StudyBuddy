@@ -16,7 +16,7 @@ export default function AboutPage() {
           </div>
 
           <p className="text-xl text-gray-700 leading-relaxed max-w-3xl mx-auto">
-            We're passionate about making learning accessible, engaging, and effective for every student. Our platform connects learners with expert tutors and provides the tools needed for academic success.
+            We're passionate about making learning collaborative, accessible, and effective for every student. Our platform connects you with peers who complement your strengths, so you're never just teaching or just learning, you're doing both. Beyond academics, we help you stay ahead academically, build your career, and navigate the parts of college and adulting that no one really prepares you for.
           </p>
         </div>
       </section>

@@ -348,8 +348,8 @@ const [currentMonth, setCurrentMonth] = useState(new Date());
 const generateTimeSlots = () => {
   const slots = [];
 
-  for (let hour = 9; hour < 24; hour++) {
-    for (let minute = 0; minute < 60; minute += 5) {
+  for (let hour = 9; hour < 17; hour++) {
+    for (let minute = 0; minute < 60; minute += 15) {
       const date = new Date();
       date.setHours(hour, minute, 0, 0);
 

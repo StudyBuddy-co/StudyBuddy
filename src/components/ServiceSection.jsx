@@ -5,7 +5,7 @@ export function ServicesSection({ openSignup }) {
     {
       title: "Tutoring Sessions",
       description:
-        "Select your peer tutors based on their strengths in the areas where you need help. You'll be paired with peers who excel in subjects where you need to step up. Other tutors are also willing to support you and have the experience for all your tutoring requests.",
+        "Select your peer tutors based on their strengths in the areas where you need help. You'll be paired with peers who excel in subjects where you need to step up.",
       imageUrl:
         "https://images.unsplash.com/photo-1516321318423-f06f85e504b3",
       gradient: "from-teal-400 to-cyan-400",
@@ -21,7 +21,7 @@ export function ServicesSection({ openSignup }) {
     {
       title: "Connections",
       description:
-        "Through StudyBuddy's you'll have the chance to meet students you've probably never crossed paths with before. These connections aren't just limited to the academics. You're not confined to meeting people just for studying. Connect with peers who share your interests and goals.",
+        "Through StudyBuddy's you'll have the chance to meet students you've probably never crossed paths with before. As we want to foster meaningful connections aren't just limited to the academics. You can connect with peers who share your interests and goals.",
       imageUrl:
         "https://images.unsplash.com/photo-1522071820081-009f0129c71c",
       gradient: "from-sky-400 to-cyan-400",
