@@ -18,6 +18,7 @@ import FindTutor from "./pages/FindTutor"
 import PublicProfile from "./pages/PublicProfile";
 import Message from "./pages/Message"
 import MeetingRoomPage from "./pages/MeetingRoom"
+import ResourcePage from "./pages/Resource"
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -105,6 +106,8 @@ function MeetingRoomRoute() {
               </ProtectedRoute>
             }
           />
+
+<Route path="/resources" element={<ProtectedRoute><ResourcePage /></ProtectedRoute>} />
 
           <Route
             path="/profile"

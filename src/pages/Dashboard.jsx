@@ -75,7 +75,7 @@ useEffect(() => {
   const quickActions = [
     { title: "Find Tutors", icon: "🔍", path: "/findtutor", description: "Connect with expert tutors", disabled: false },
     { title: "Messages", icon: "💬", path: "/messages", description: "Chat with your tutors", disabled: false },
-    { title: "Resources", icon: "📚", path: "/resources", description: "Access study materials", disabled: true },
+    { title: "Resources", icon: "📚", path: "/resources", description: "Access study materials", disabled: false },
     { title: "AI Assistant", icon: "🤖", path: "/ai-assistant", description: "Get AI-powered help", disabled: true },
     { title: "Meeting Room", icon: "📞", path: "/meeting-room", description: "Join video sessions", disabled: false },
     { title: "Profile", icon: "👤", path: "/profile", description: "Manage your profile", disabled: false },
